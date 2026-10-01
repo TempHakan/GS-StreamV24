@@ -127,6 +127,25 @@ fun UpdateDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
+                if (updateInfo.isDownloading) {
+                    Text(
+                        text = "APK İndiriliyor: %${(updateInfo.downloadProgress * 100).toInt()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { updateInfo.downloadProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(CircleShape),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
                 // Test / Simülasyon Butonu
                 OutlinedButton(
                     onClick = onSimulateNextBump,

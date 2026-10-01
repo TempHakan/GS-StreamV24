@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import axios from 'axios';
 import { M3uParser } from '../services/m3uParser';
 import { XtreamClient } from '../services/xtreamClient';
+import { StbPortalService } from '../services/stbPortalService';
 import { EpgService } from '../services/epgService';
 import { StreamProxy } from '../services/streamProxy';
 import { VersionInfo } from '../models/types';
@@ -68,6 +69,23 @@ export class ApiController {
       }
     } catch (error: any) {
       res.status(500).json({ error: 'Xtream bağlantı hatası', details: error.message });
+    }
+  }
+
+  // STB / MAC Portal Kanalları
+  public static async getStbChannels(req: Request, res: Response): Promise<void> {
+    const { portalUrl, mac } = req.query;
+    if (!portalUrl || !mac) {
+      res.status(400).json({ error: 'portalUrl ve mac parametreleri zorunludur.' });
+      return;
+    }
+
+    try {
+      const stbService = new StbPortalService(String(portalUrl), String(mac));
+      const channels = await stbService.getAllChannels();
+      res.json({ total: channels.length, channels });
+    } catch (error: any) {
+      res.status(500).json({ error: 'STB portal bağlantı hatası', details: error.message });
     }
   }
 

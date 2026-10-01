@@ -6,6 +6,7 @@ const router = Router();
 // M3U & Xtream Routes
 router.post('/m3u/parse', ApiController.parseM3u);
 router.get('/xtream/channels', ApiController.getXtreamChannels);
+router.get('/stb/channels', ApiController.getStbChannels);
 router.get('/epg', ApiController.fetchEpg);
 
 // Streaming Proxy

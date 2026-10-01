@@ -34,6 +34,7 @@ data class StreamUiState(
     val backendUrl: String = "http://localhost:3000",
     val useProxy: Boolean = false,
     val defaultPlayerIsVlc: Boolean = false,
+    val autoInstallUpdates: Boolean = true,
     val aspectRatioMode: Int = 0 // 0: FIT, 1: ZOOM/FILL, 2: 16:9, 3: 4:3
 )
 
@@ -49,6 +50,18 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
     init {
         viewModelScope.launch {
             channelRepository.seedInitialChannelsIfEmpty()
+        }
+
+        // Açılışta GitHub Releases üzerinden arka planda güncelleme kontrolü
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(2000)
+            val info = updateRepository.checkForUpdates(
+                backendUrl = _uiState.value.backendUrl,
+                autoInstallIfNewer = false
+            )
+            if (info.isAvailable) {
+                _uiState.update { it.copy(showUpdateDialog = true) }
+            }
         }
 
         // Live channels flow
@@ -142,6 +155,10 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.update { it.copy(backendUrl = url) }
     }
 
+    fun setAutoInstallUpdates(enabled: Boolean) {
+        _uiState.update { it.copy(autoInstallUpdates = enabled) }
+    }
+
     fun showUpdateDialog(show: Boolean) {
         _uiState.update { it.copy(showUpdateDialog = show) }
     }
@@ -156,7 +173,7 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
 
     fun checkForUpdates() {
         viewModelScope.launch {
-            val info = updateRepository.checkForUpdates(_uiState.value.backendUrl)
+            val info = updateRepository.checkForUpdates(_uiState.value.backendUrl, autoInstallIfNewer = false)
             if (info.isAvailable) {
                 _uiState.update { it.copy(showUpdateDialog = true) }
             }
@@ -169,13 +186,22 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun downloadAndInstallUpdate(url: String, tag: String) {
-        updateRepository.startApkDownloadAndInstall(url, tag)
-        _uiState.update { it.copy(showUpdateDialog = false) }
+        viewModelScope.launch {
+            updateRepository.startDirectDownloadAndInstall(url, tag)
+            _uiState.update { it.copy(showUpdateDialog = false) }
+        }
     }
 
     fun importM3uPlaylist(name: String, url: String, onComplete: (Int) -> Unit) {
         viewModelScope.launch {
             val count = channelRepository.importM3uFromUrl(name, url)
+            onComplete(count)
+        }
+    }
+
+    fun importStbPortal(name: String, portalUrl: String, mac: String, onComplete: (Int) -> Unit) {
+        viewModelScope.launch {
+            val count = channelRepository.importStbPortal(name, portalUrl, mac)
             onComplete(count)
         }
     }

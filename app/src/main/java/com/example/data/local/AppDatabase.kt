@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import com.example.data.model.Channel
 import com.example.data.model.Playlist
 
-@Database(entities = [Channel::class, Playlist::class], version = 1, exportSchema = false)
+@Database(entities = [Channel::class, Playlist::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun channelDao(): ChannelDao

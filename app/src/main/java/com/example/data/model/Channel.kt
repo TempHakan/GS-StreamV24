@@ -28,12 +28,13 @@ data class Playlist(
     @PrimaryKey val id: String,
     val name: String,
     val url: String,
-    val type: String = "M3U", // M3U, XTREAM, PORTAL
+    val type: String = "M3U", // M3U, XTREAM, PORTAL, STB
     val channelCount: Int = 0,
     val lastUpdated: Long = System.currentTimeMillis(),
     val xtreamHost: String? = null,
     val xtreamUser: String? = null,
-    val xtreamPass: String? = null
+    val xtreamPass: String? = null,
+    val macAddress: String? = null
 )
 
 data class EpgProgram(
@@ -52,5 +53,7 @@ data class VersionUpdateInfo(
     val versionCode: Int,
     val downloadUrl: String,
     val changelog: List<String>,
-    val isAvailable: Boolean = false
+    val isAvailable: Boolean = false,
+    val isDownloading: Boolean = false,
+    val downloadProgress: Float = 0.0f
 )

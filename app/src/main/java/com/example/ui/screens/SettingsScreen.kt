@@ -25,6 +25,7 @@ fun SettingsScreen(
     onToggleDefaultPlayer: (Boolean) -> Unit,
     onCheckForUpdates: () -> Unit,
     onSimulateVersionBump: () -> Unit,
+    onToggleAutoUpdate: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var backendInput by remember(state.backendUrl) { mutableStateOf(state.backendUrl) }
@@ -92,10 +93,35 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Yeni versiyon geldiğinde VK01 -> VK02 -> VK03 şeklinde 1 artırılarak arka planda APK güncellemesi denetlenir.",
+                    text = "Yeni versiyon geldiğinde VK01 -> VK02 -> VK03 şeklinde 1 artırılarak GitHub üzerinden APK güncellemesi denetlenir.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "GitHub Otomatik Güncelleme",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = "Yeni sürüm çıktığında telefonunuza otomatik indirip kurar.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = state.autoInstallUpdates,
+                        onCheckedChange = onToggleAutoUpdate
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 

@@ -212,7 +212,8 @@ fun MainScreenContent(viewModel: StreamViewModel) {
                     onSetBackendUrl = { viewModel.setBackendUrl(it) },
                     onToggleDefaultPlayer = { viewModel.setDefaultPlayerIsVlc(it) },
                     onCheckForUpdates = { viewModel.checkForUpdates() },
-                    onSimulateVersionBump = { viewModel.simulateVersionBump() }
+                    onSimulateVersionBump = { viewModel.simulateVersionBump() },
+                    onToggleAutoUpdate = { viewModel.setAutoInstallUpdates(it) }
                 )
             }
         }
@@ -246,13 +247,18 @@ fun MainScreenContent(viewModel: StreamViewModel) {
         )
     }
 
-    // Yeni Kaynak Ekleme Penceresi (M3U & Xtream)
+    // Yeni Kaynak Ekleme Penceresi (M3U, Xtream & STB MAC Portal)
     if (state.showAddSourceDialog) {
         AddSourceDialog(
             onDismiss = { viewModel.showAddSourceDialog(false) },
             onAddM3u = { name, url ->
                 viewModel.importM3uPlaylist(name, url) { count ->
                     Toast.makeText(context, "$count kanal başarıyla içe aktarıldı.", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onAddStb = { name, host, mac ->
+                viewModel.importStbPortal(name, host, mac) { count ->
+                    Toast.makeText(context, "$count kanal STB portalından yüklendi.", Toast.LENGTH_SHORT).show()
                 }
             }
         )
