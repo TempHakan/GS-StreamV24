@@ -1,65 +1,57 @@
 # StreamFlow IPTV (Android & Android TV + Backend)
 
-> **Sürüm:** v2.4.0 (VK Serisi: `VK01`, `VK02`...)  
-> **Platform Desteği:** Android Mobile, Android TV / Google TV (16:9 Leanback), Tablet  
-> **Medya Motoru:** AndroidX Media3 (ExoPlayer) + VLC Media Player Intent (`org.videolan.vlc`)  
+[![Download APK](https://img.shields.io/badge/İndir-StreamFlow--v2.4.0--VK01.apk-00E5FF?style=for-the-badge&logo=android&logoColor=black)](apk/StreamFlow-IPTV-v2.4.0-VK01.apk)
+[![Version](https://img.shields.io/badge/Sürüm-v2.4.0--VK01-7C4DFF?style=for-the-badge)](version.properties)
+[![Platform](https://img.shields.io/badge/Platform-Mobile%20%7C%20Android%20TV%2016%3A9-FF007F?style=for-the-badge&logo=android)](app)
+[![License](https://img.shields.io/badge/Lisans-MIT-green?style=for-the-badge)](LICENSE)
 
 ---
 
-## 🚀 Proje Yapısı
+## 📥 1. Android APK Doğrudan İndirme
 
-```
-streamflow-iptv/
-├── .github/workflows/          # GitHub Actions CI/CD (Otomatik APK derleme ve Release)
-├── app/                        # Android Native Jetpack Compose İstemci Uygulaması
-│   ├── src/main/java/          # Kotlin MVVM Kaynak Kodları (ExoPlayer, VLC Intent, EPG, Temalar)
-│   ├── src/main/res/           # Vektör ikonlar, TV banner, adaptive mipmap'ler
-│   └── build.gradle.kts        # VK versiyonlama ve Gradle yapılandırması
-├── backend/                    # Node.js Express & TypeScript Arka Uç Servisi
-│   ├── src/controllers/        # Xtream, M3U, EPG ve VK Güncelleme denetleyicisi
-│   ├── src/services/           # M3U ayrıştırıcı, Xtream istemcisi, Stream proxy, EPG
-│   ├── Dockerfile              # Docker konteyner konfigürasyonu
-│   └── docker-compose.yml      # Tek komutla ayağa kaldırma
-├── version.properties          # Dinamik versiyon takip dosyası (VK_CODE, VK_TAG=VK01)
-├── bump_version.sh             # Versiyonu 1 artıran kabuk betiği (VK01 -> VK02)
-└── README.md                   # Kurulum, GitHub Push ve Kullanım Kılavuzu
-```
+StreamFlow IPTV derlenmiş hazır APK dosyasını aşağıdaki bağlantılardan hemen indirebilirsiniz:
+
+| Sürüm | Dosya | Boyut | İndirme Bağlantısı |
+| :--- | :--- | :--- | :--- |
+| **v2.4.0-VK01 (Stabil)** | `StreamFlow-IPTV-v2.4.0-VK01.apk` | **~26 MB** | [⬇️ **Doğrudan Depodan İndir**](apk/StreamFlow-IPTV-v2.4.0-VK01.apk) |
+| **GitHub Raw Linki** | `StreamFlow-IPTV-v2.4.0-VK01.apk` | **~26 MB** | [🌐 **Raw İndirme Linki**](https://github.com/vyslkrc/streamflow-iptv/raw/main/apk/StreamFlow-IPTV-v2.4.0-VK01.apk) |
+| **GitHub Releases** | Son Sürüm Otomatik Dağıtım | **~26 MB** | [🚀 **GitHub Releases Sayfası**](https://github.com/vyslkrc/streamflow-iptv/releases) |
+
+> 💡 **Kurulum Notu:** İndirdiğiniz APK'yı Android telefonunuza veya Android TV / TV Box cihazınıza aktararak tek tıkla kurabilirsiniz ("Bilinmeyen kaynaklara izin ver" seçeneğini aktif ediniz).
 
 ---
 
-## 📦 1. GitHub'a Push Rehberi
+## 🚀 2. GitHub'a Push ve Otomatik Pipeline
 
-Aşağıdaki komutları terminalinizde çalıştırarak projeyi doğrudan GitHub deponuza gönderebilirsiniz:
+Aşağıdaki komutları terminalinizde çalıştırarak projeyi ve hazır APK'yı doğrudan GitHub reponuza gönderebilirsiniz:
 
 ```bash
-# 1. Proje ana dizininde Git deposunu başlatın (varsa atlayın)
-git init
-
-# 2. Değişiklikleri ekleyin ve ilk commit'i yapın
-git add .
-git commit -m "feat: StreamFlow IPTV full release with backend, TV/Mobile UI & VK versioning"
-
-# 3. Ana dalı 'main' olarak ayarlayın
+# 1. Ana dalı main olarak belirleyin
 git branch -M main
 
-# 4. GitHub'daki deponuzun adresini bağlayın
-# (Kendi kullanıcı adınızı ve repo adınızı yazın)
-git remote add origin https://github.com/<KULLANICI_ADINIZ>/streamflow-iptv.git
+# 2. Değişiklikleri ekleyin ve ilk sürümü commit yapın
+git add .
+git commit -m "feat: StreamFlow IPTV v2.4.0-VK01 release with ready APK, backend and TV support"
 
-# 5. Kodları GitHub'a gönderin
+# 3. GitHub deponuzu bağlayın (Kendi GitHub repo URL'nizi girin):
+git remote add origin https://github.com/vyslkrc/streamflow-iptv.git
+
+# 4. Kodları ve APK'yı GitHub'a pushlayın:
 git push -u origin main
 ```
 
+> **GitHub Actions CI/CD:** Projeyi pushladığınızda `.github/workflows/build-apk.yml` otomatik çalışır; hem GitHub Release oluşturur hem de yeni APK dosyalarını her zaman güncel olarak dağıtır.
+
 ---
 
-## 🔄 2. "VK" Versiyon Güncelleme Mekanizması
+## 🔄 3. VK Versiyon Güncelleme Mekanizması (`VK01` ➔ `VK02` ➔ `VK03` ...)
 
-Kullanıcının talep ettiği **VK01 -> VK02 -> VK03** mekanizması hem yerel derlemede hem backend'de hem de uygulama içinde entegredir:
+Kullanıcı talebi doğrultusunda geliştirilen **otomatik sürüm artırma mekanizması**:
 
-1. **Komut Satırı / Betik ile Artırma:**
+1. **Komut Satırından / Terminalden Artırma:**
    ```bash
    ./bump_version.sh
-   # Çıktı: Versiyon Başarıyla Artırıldı! Önceki: VK01 -> Yeni: VK02
+   # Çıktı: [StreamFlow] Versiyon Başarıyla Artırıldı! Önceki: VK01 -> Yeni: VK02 (2.4.0-VK02)
    ```
 
 2. **Gradle Görevi ile Artırma:**
@@ -68,28 +60,35 @@ Kullanıcının talep ettiği **VK01 -> VK02 -> VK03** mekanizması hem yerel de
    ```
 
 3. **Uygulama İçi Canlı Güncelleme:**
-   - Ayarlar (Settings) ekranında ve ana ekranda **"VK Sürüm Güncelleme Motoru"** yer alır.
-   - Yeni bir versiyon (örneğin VK02) geldiğinde kullanıcıya bildirim/diyalog sunulur.
-   - "Güncellemeyi İndir ve Kur" butonu APK indirme ve Android paket yükleyicisi (`FileProvider`) intent'ini tetikler.
+   - Uygulama içinde üst barda ve **Ayarlar** sekmesinde güncel versiyon etiketi (**VK01**) görünür.
+   - Yeni bir versiyon çıktığında açılan diyalog ile **"APK İndir ve Güncelle (VK02)"** işlemi başlatılır.
+   - Ayarlar ekranındaki test butonu ile anında bir sonraki VK sürümü simüle edilebilir.
 
 ---
 
-## 📺 3. Android APK Derleme
+## 📱 4. Uygulama Yetenekleri & Ekranlar
 
-```bash
-# Debug APK derleme:
-gradle assembleDebug
-
-# Çıktı konumu:
-# app/build/outputs/apk/debug/app-debug.apk
-
-# Release APK derleme:
-gradle assembleRelease
-```
+1. **Çift Form Faktörü:**
+   - **Mobil:** Dikey dokunmatik gezinme (Canlı TV, VOD, Oynatıcı, Kaynaklar, Ayarlar sekmeleri).
+   - **Android TV / Google TV (16:9 Leanback):** D-Pad uzaktan kumanda odak efektleri, geniş ekran video ızgarası ve TV Başlatıcı simgesi (`tv_banner`).
+2. **Medya Motoru:**
+   - Dahili **AndroidX Media3 (ExoPlayer)** ile HLS (`.m3u8`), TS ve MP4 akış desteği.
+   - En-boy oranı değişimi (Sığdır, Doldur, 16:9, 4:3).
+   - **VLC Media Player Intent Entegrasyonu (`org.videolan.vlc`):** Tek tıkla harici VLC uygulamasını açma ve akışı aktarma.
+3. **EPG & Zaman Çizelgesi:**
+   - Kanalların yayın akışı, anlık program ilerleme çubuğu ve 7 günlük Catch-up (Geriye Sarma) desteği.
+4. **Dinamik Temalar:**
+   - **Dark OLED (`#0B0E14`)**
+   - **Vibrant Neon (Cyberpunk Glow)**
+   - **Clean Light (Temiz Açık)**
+5. **Yerel Veritabanı:**
+   - Favoriler, geçmiş ve çalma listeleri için **Room SQLite** entegrasyonu.
 
 ---
 
-## 🌐 4. Backend Servisini Çalıştırma
+## 🌐 5. Backend Proxy Servisi (`/backend`)
+
+CORS engellerini aşmak ve User-Agent spoofing yapmak için hazır Node.js servisi:
 
 ```bash
 cd backend
@@ -98,6 +97,8 @@ npm run dev
 # veya Docker ile:
 docker-compose up -d --build
 ```
-- Stream Proxy: `http://localhost:3000/api/v1/proxy/stream?url=<AKIS_URL>`
-- Versiyon Kontrolü: `http://localhost:3000/api/v1/version/check`
-- Versiyon Artırma: `POST http://localhost:3000/api/v1/version/bump`
+* **Stream Proxy:** `http://localhost:3000/api/v1/proxy/stream?url=<AKIS_URL>`
+* **M3U Ayrıştırıcı:** `POST http://localhost:3000/api/v1/m3u/parse`
+* **Xtream Codes API:** `http://localhost:3000/api/v1/xtream/channels`
+* **EPG XMLTV İndirici:** `http://localhost:3000/api/v1/epg?url=<XMLTV_URL>`
+* **VK Versiyon API:** `http://localhost:3000/api/v1/version/check`

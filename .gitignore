@@ -18,4 +18,7 @@ local.properties
 debug.keystore
 backend/node_modules/
 backend/dist/
+.build-outputs/
+debug.keystore.base64
+
 
