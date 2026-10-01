@@ -1,0 +1,131 @@
+import { Request, Response } from 'express';
+import axios from 'axios';
+import { M3uParser } from '../services/m3uParser';
+import { XtreamClient } from '../services/xtreamClient';
+import { EpgService } from '../services/epgService';
+import { StreamProxy } from '../services/streamProxy';
+import { VersionInfo } from '../models/types';
+
+// Bellekte saklanan güncel versiyon durumu (VK mekanizması)
+let currentVersionState: VersionInfo = {
+  currentVersion: 'VK01',
+  latestVersion: 'VK02',
+  versionCode: 2,
+  downloadUrl: 'https://github.com/vyslkrc/streamflow-iptv/releases/download/v2.4.0-VK02/streamflow-v2.4.0-VK02.apk',
+  changelog: [
+    'Android TV D-Pad odak çerçeveleri ve kumanda geçişleri iyileştirildi',
+    'ExoPlayer HLS arabellekleme performansı artırıldı',
+    'VLC Intent çağrısı güncellendi',
+    'EPG zaman çizelgesi 7 günlük geriye sarma desteği eklendi'
+  ],
+  mandatory: false,
+  releaseDate: new Date().toISOString().split('T')[0]
+};
+
+export class ApiController {
+  // M3U Ayrıştırma Uç Noktası
+  public static async parseM3u(req: Request, res: Response): Promise<void> {
+    const { url, raw } = req.body;
+    try {
+      let content = raw;
+      if (url) {
+        const response = await axios.get(url, {
+          timeout: 20000,
+          headers: { 'User-Agent': 'StreamFlow IPTV Engine/2.4.0' }
+        });
+        content = response.data;
+      }
+      if (!content) {
+        res.status(400).json({ error: 'M3U içeriği veya URL belirtilmedi.' });
+        return;
+      }
+      const channels = M3uParser.parse(content);
+      res.json({ total: channels.length, channels });
+    } catch (error: any) {
+      res.status(500).json({ error: 'M3U ayrıştırılamadı', details: error.message });
+    }
+  }
+
+  // Xtream Codes Kanalları
+  public static async getXtreamChannels(req: Request, res: Response): Promise<void> {
+    const { host, username, password, action, category_id } = req.query;
+    if (!host || !username || !password) {
+      res.status(400).json({ error: 'host, username ve password parametreleri zorunludur.' });
+      return;
+    }
+
+    try {
+      const client = new XtreamClient(String(host), String(username), String(password));
+      if (action === 'get_live_categories') {
+        const categories = await client.getLiveCategories();
+        res.json(categories);
+      } else if (action === 'get_vod_streams') {
+        const vods = await client.getVodStreams(category_id ? String(category_id) : undefined);
+        res.json(vods);
+      } else {
+        const channels = await client.getLiveStreams(category_id ? String(category_id) : undefined);
+        res.json(channels);
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: 'Xtream bağlantı hatası', details: error.message });
+    }
+  }
+
+  // EPG Ayrıştırma
+  public static async fetchEpg(req: Request, res: Response): Promise<void> {
+    const epgUrl = req.query.url as string;
+    if (!epgUrl) {
+      res.status(400).json({ error: 'EPG URL parametresi eksik' });
+      return;
+    }
+    try {
+      const epgMap = await EpgService.fetchAndParse(epgUrl);
+      const output: Record<string, any> = {};
+      epgMap.forEach((v, k) => { output[k] = v; });
+      res.json({ totalChannelsWithEpg: epgMap.size, data: output });
+    } catch (error: any) {
+      res.status(500).json({ error: 'EPG indirilemedi', details: error.message });
+    }
+  }
+
+  // Stream Proxy Relay
+  public static async proxyStream(req: Request, res: Response): Promise<void> {
+    await StreamProxy.handleProxy(req, res);
+  }
+
+  // Versiyon Kontrolü (VK Mekanizması)
+  public static checkVersion(req: Request, res: Response): void {
+    const clientVersion = req.query.client_version as string || 'VK01';
+    const isUpdateAvailable = clientVersion !== currentVersionState.latestVersion;
+    res.json({
+      ...currentVersionState,
+      isUpdateAvailable,
+      clientVersion
+    });
+  }
+
+  // Yeni Versiyon Tetikleme (VK01 -> VK02 -> VK03 ...)
+  public static bumpVersion(req: Request, res: Response): void {
+    const nextCode = currentVersionState.versionCode + 1;
+    const nextTag = `VK${nextCode < 10 ? '0' + nextCode : nextCode}`;
+    
+    currentVersionState = {
+      currentVersion: currentVersionState.latestVersion,
+      latestVersion: nextTag,
+      versionCode: nextCode,
+      downloadUrl: `https://github.com/vyslkrc/streamflow-iptv/releases/download/v2.4.0-${nextTag}/streamflow-v2.4.0-${nextTag}.apk`,
+      changelog: [
+        `Yeni versiyon ${nextTag} yayınlandı`,
+        'Performans optimizasyonu ve kararlılık artışları',
+        'Canlı akış gecikme süreleri azaltıldı'
+      ],
+      mandatory: false,
+      releaseDate: new Date().toISOString().split('T')[0]
+    };
+
+    res.json({
+      message: `Versiyon başarıyla artırıldı: ${nextTag}`,
+      version: currentVersionState
+    });
+  }
+}

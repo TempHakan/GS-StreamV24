@@ -1,0 +1,89 @@
+name: Build & Release StreamFlow IPTV APK
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      bump_version:
+        description: 'Derleme öncesi VK versiyonunu 1 artır (Örn: VK01 -> VK02)'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build:
+    name: Build APK & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Optional VK Version Bump
+        if: ${{ github.event.inputs.bump_version == 'true' }}
+        run: |
+          chmod +x bump_version.sh
+          ./bump_version.sh
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.properties
+          git commit -m "chore(release): bump version [skip ci]" || echo "No changes to commit"
+          git push origin main || echo "Push failed or not permitted"
+
+      - name: Read VK Version
+        id: get_version
+        run: |
+          VK_TAG=$(grep 'VK_TAG=' version.properties | cut -d'=' -f2)
+          VERSION_BASE=$(grep 'VERSION_BASE=' version.properties | cut -d'=' -f2)
+          echo "VK_TAG=$VK_TAG" >> $GITHUB_ENV
+          echo "FULL_VERSION=${VERSION_BASE}-${VK_TAG}" >> $GITHUB_ENV
+          echo "Building StreamFlow IPTV APK for version: ${VERSION_BASE}-${VK_TAG}"
+
+      - name: Build Debug & Release APK
+        run: |
+          ./gradlew assembleDebug --stacktrace
+          # İsteğe bağlı release derleme
+          # ./gradlew assembleRelease
+
+      - name: Rename APK Artifact
+        run: |
+          mkdir -p output_apk
+          cp app/build/outputs/apk/debug/app-debug.apk output_apk/StreamFlow-IPTV-${{ env.FULL_VERSION }}.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreamFlow-IPTV-${{ env.FULL_VERSION }}
+          path: output_apk/StreamFlow-IPTV-${{ env.FULL_VERSION }}.apk
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.bump_version == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: StreamFlow IPTV ${{ env.FULL_VERSION }}
+          tag_name: v${{ env.FULL_VERSION }}
+          files: output_apk/StreamFlow-IPTV-${{ env.FULL_VERSION }}.apk
+          body: |
+            ## StreamFlow IPTV Sürüm ${{ env.FULL_VERSION }}
+            - Otomatik VK Versiyon Artırma: `${{ env.VK_TAG }}`
+            - Android Mobile & Android TV (16:9 Leanback) Desteği
+            - ExoPlayer v2 & VLC Media Player Intent Entegrasyonu
+            - M3U, Xtream Codes API ve EPG Zaman Çizelgesi
+            - Çoklu Tema: Dark OLED, Clean Light, Vibrant Cyberpunk Neon
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

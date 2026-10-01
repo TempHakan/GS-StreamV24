@@ -1,0 +1,6 @@
+{
+  "name": "StreamFlow IPTV",
+  "description": "Modern IPTV ve VOD Medya Oynatıcı, M3U/Xtream desteği, EPG, VLC entegrasyonu ve VK versiyon güncelleme motoru",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
