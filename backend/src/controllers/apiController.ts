@@ -146,4 +146,22 @@ export class ApiController {
       version: currentVersionState
     });
   }
+
+  // APK Doğrudan İndirme Servisi
+  public static downloadApk(req: Request, res: Response): void {
+    const fs = require('fs');
+    const path = require('path');
+    const apkDir = path.resolve(__dirname, '../../../apk');
+    if (fs.existsSync(apkDir)) {
+      const files = fs.readdirSync(apkDir).filter((f: string) => f.endsWith('.apk'));
+      if (files.length > 0) {
+        const latestApk = files[files.length - 1];
+        const filePath = path.join(apkDir, latestApk);
+        res.download(filePath, latestApk);
+        return;
+      }
+    }
+    res.status(404).json({ error: 'APK dosyası sunucuda bulunamadı.' });
+  }
 }
+

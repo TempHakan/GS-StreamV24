@@ -177,6 +177,7 @@ fun MainScreenContent(viewModel: StreamViewModel) {
                     },
                     onToggleFavorite = { viewModel.toggleFavorite(it) },
                     onOpenEpg = { viewModel.showEpgDialog(it) },
+                    onSelectPlaylist = { viewModel.selectPlaylist(it) },
                     onSelectCategory = { viewModel.selectCategory(it) },
                     onSearchQueryChange = { viewModel.setSearchQuery(it) },
                     onOpenAddSource = { viewModel.showAddSourceDialog(true) }
@@ -196,6 +197,7 @@ fun MainScreenContent(viewModel: StreamViewModel) {
                     state = state,
                     effectiveStreamUrl = state.activeChannel?.let { viewModel.resolveEffectiveStreamUrl(it.streamUrl) } ?: "",
                     onCycleAspectRatio = { viewModel.cycleAspectRatio() },
+                    onToggleMute = { viewModel.togglePlayerMute() },
                     onSelectChannel = { viewModel.playChannel(it) },
                     onToggleFavorite = { viewModel.toggleFavorite(it) },
                     onOpenEpg = { viewModel.showEpgDialog(it) }

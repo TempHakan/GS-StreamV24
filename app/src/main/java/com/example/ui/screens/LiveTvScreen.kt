@@ -11,6 +11,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.model.Channel
 import com.example.ui.components.ChannelListItem
@@ -22,18 +24,32 @@ fun LiveTvScreen(
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (Channel) -> Unit,
     onOpenEpg: (Channel) -> Unit,
+    onSelectPlaylist: (String?) -> Unit,
     onSelectCategory: (String?) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onOpenAddSource: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val filteredChannels = state.liveChannels.filter { channel ->
+    // 1. Seçili Çalma Listesine göre filtrele
+    val playlistChannels = if (state.selectedPlaylistId == null) {
+        state.liveChannels
+    } else {
+        state.liveChannels.filter { it.playlistId == state.selectedPlaylistId }
+    }
+
+    // 2. Seçili listenin kategorilerini hesapla
+    val availableCategories = playlistChannels.map { it.groupTitle }.distinct().sorted()
+
+    // 3. Arama ve Kategori filtrelerini uygula
+    val filteredChannels = playlistChannels.filter { channel ->
         val matchesCategory = state.selectedCategory == null || channel.groupTitle == state.selectedCategory
         val matchesSearch = state.searchQuery.isEmpty() ||
                 channel.name.contains(state.searchQuery, ignoreCase = true) ||
                 channel.groupTitle.contains(state.searchQuery, ignoreCase = true)
         matchesCategory && matchesSearch
     }
+
+    val selectedPlaylist = state.playlists.find { it.id == state.selectedPlaylistId }
 
     Column(modifier = modifier.fillMaxSize()) {
         // Search & Add Source Bar
@@ -70,7 +86,88 @@ fun LiveTvScreen(
             }
         }
 
-        // Category Filter Chips
+        // Çalma Listesi / Kaynak Seçici (Playlist Selector)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Folder,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+
+            // Tüm Kaynaklar Çipi
+            FilterChip(
+                selected = state.selectedPlaylistId == null,
+                onClick = { onSelectPlaylist(null) },
+                label = { Text("Tüm Listeler (${state.liveChannels.size})", fontWeight = FontWeight.SemiBold) },
+                leadingIcon = {
+                    Icon(Icons.Default.Layers, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+            )
+
+            // Ekli Kaynaklar / Portallar Çipleri
+            state.playlists.forEach { playlist ->
+                val icon = when (playlist.type) {
+                    "STB" -> Icons.Default.Dvr
+                    "XTREAM" -> Icons.Default.CloudSync
+                    else -> Icons.Default.FormatListBulleted
+                }
+                FilterChip(
+                    selected = state.selectedPlaylistId == playlist.id,
+                    onClick = { onSelectPlaylist(playlist.id) },
+                    label = {
+                        Text(
+                            text = "${playlist.name} (${playlist.channelCount})",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
+                )
+            }
+        }
+
+        // Seçili Liste Bilgi Rozeti (Eğer spesifik bir liste seçildiyse)
+        if (selectedPlaylist != null) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                shape = MaterialTheme.shapes.small
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Aktif Liste: ${selectedPlaylist.name} [${selectedPlaylist.type}]",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(
+                        onClick = { onSelectPlaylist(null) },
+                        contentPadding = PaddingValues(0.dp),
+                        modifier = Modifier.height(24.dp)
+                    ) {
+                        Text("Tümünü Göster", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+
+        // Kategori Filtre Çipleri
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -81,11 +178,11 @@ fun LiveTvScreen(
             FilterChip(
                 selected = state.selectedCategory == null,
                 onClick = { onSelectCategory(null) },
-                label = { Text("Tüm Kanallar (${state.liveChannels.size})") }
+                label = { Text("Tüm Kategoriler (${playlistChannels.size})") }
             )
 
-            state.categories.forEach { category ->
-                val count = state.liveChannels.count { it.groupTitle == category }
+            availableCategories.forEach { category ->
+                val count = playlistChannels.count { it.groupTitle == category }
                 FilterChip(
                     selected = state.selectedCategory == category,
                     onClick = { onSelectCategory(category) },
@@ -94,7 +191,7 @@ fun LiveTvScreen(
             }
         }
 
-        // Channel List
+        // Kanal Listesi
         if (filteredChannels.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -111,16 +208,24 @@ fun LiveTvScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = if (state.searchQuery.isNotEmpty()) "Aramaya uygun kanal bulunamadı." else "Henüz kanal eklenmedi.",
+                        text = "Bu listede aranan kriterlere uygun kanal bulunamadı.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(onClick = {
+                        onSelectPlaylist(null)
+                        onSelectCategory(null)
+                        onSearchQueryChange("")
+                    }) {
+                        Text("Filtreleri Temizle")
+                    }
                 }
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filteredChannels, key = { it.id }) { channel ->

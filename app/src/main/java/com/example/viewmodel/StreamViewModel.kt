@@ -35,6 +35,8 @@ data class StreamUiState(
     val useProxy: Boolean = false,
     val defaultPlayerIsVlc: Boolean = false,
     val autoInstallUpdates: Boolean = true,
+    val selectedPlaylistId: String? = null,
+    val isPlayerMuted: Boolean = false,
     val aspectRatioMode: Int = 0 // 0: FIT, 1: ZOOM/FILL, 2: 16:9, 3: 4:3
 )
 
@@ -129,6 +131,14 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
 
     fun selectCategory(category: String?) {
         _uiState.update { it.copy(selectedCategory = category) }
+    }
+
+    fun selectPlaylist(playlistId: String?) {
+        _uiState.update { it.copy(selectedPlaylistId = playlistId, selectedCategory = null) }
+    }
+
+    fun togglePlayerMute() {
+        _uiState.update { it.copy(isPlayerMuted = !it.isPlayerMuted) }
     }
 
     fun setSearchQuery(query: String) {

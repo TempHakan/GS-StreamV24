@@ -27,6 +27,7 @@ fun PlayerScreen(
     state: StreamUiState,
     effectiveStreamUrl: String,
     onCycleAspectRatio: () -> Unit,
+    onToggleMute: () -> Unit,
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (Channel) -> Unit,
     onOpenEpg: (Channel) -> Unit,
@@ -47,6 +48,8 @@ fun PlayerScreen(
                     channel = channel,
                     streamUrl = effectiveStreamUrl,
                     aspectRatioMode = state.aspectRatioMode,
+                    isMuted = state.isPlayerMuted,
+                    onToggleMute = onToggleMute,
                     onCycleAspectRatio = onCycleAspectRatio,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -95,6 +98,15 @@ fun PlayerScreen(
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Mute / Unmute Button
+                            IconButton(onClick = onToggleMute) {
+                                Icon(
+                                    imageVector = if (state.isPlayerMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                    contentDescription = if (state.isPlayerMuted) "Sesi Aç" else "Sesi Kapat",
+                                    tint = if (state.isPlayerMuted) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                                )
+                            }
+
                             // EPG Button
                             IconButton(onClick = { onOpenEpg(channel) }) {
                                 Icon(

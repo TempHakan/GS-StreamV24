@@ -36,6 +36,8 @@ fun VideoPlayerView(
     channel: Channel?,
     streamUrl: String,
     aspectRatioMode: Int,
+    isMuted: Boolean = false,
+    onToggleMute: () -> Unit = {},
     onCycleAspectRatio: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -49,7 +51,12 @@ fun VideoPlayerView(
         ExoPlayer.Builder(context).build().apply {
             playWhenReady = true
             repeatMode = Player.REPEAT_MODE_OFF
+            volume = if (isMuted) 0f else 1f
         }
+    }
+
+    LaunchedEffect(isMuted) {
+        exoPlayer.volume = if (isMuted) 0f else 1f
     }
 
     DisposableEffect(streamUrl) {
@@ -223,6 +230,15 @@ fun VideoPlayerView(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Mute / Unmute Button (Requested in Prompt)
+                    IconButton(onClick = onToggleMute) {
+                        Icon(
+                            imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                            contentDescription = if (isMuted) "Sesi Aç" else "Sesi Kapat",
+                            tint = if (isMuted) MaterialTheme.colorScheme.error else Color.White
+                        )
+                    }
+
                     // Aspect ratio button
                     IconButton(onClick = onCycleAspectRatio) {
                         Icon(
@@ -275,6 +291,36 @@ fun VideoPlayerView(
                     tint = Color.White,
                     modifier = Modifier.size(36.dp)
                 )
+            }
+        }
+
+        // Sessiz Durum Rozeti (Muted Floating Badge)
+        if (isMuted) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.75f),
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 16.dp, top = 60.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VolumeOff,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Sessiz",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 

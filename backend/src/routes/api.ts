@@ -15,5 +15,6 @@ router.get('/proxy/stream', ApiController.proxyStream);
 // Versiyon Güncelleme ve VK Artırma Mekanizması
 router.get('/version/check', ApiController.checkVersion);
 router.post('/version/bump', ApiController.bumpVersion);
+router.get('/version/download', ApiController.downloadApk);
 
 export default router;
