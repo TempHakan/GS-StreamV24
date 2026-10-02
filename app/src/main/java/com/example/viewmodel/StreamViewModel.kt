@@ -210,6 +210,18 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.update { it.copy(showUpdateDialog = true) }
     }
 
+    fun saveGithubToken(token: String) {
+        updateRepository.saveGithubToken(token)
+    }
+
+    fun getSavedGithubToken(): String {
+        return updateRepository.getSavedGithubToken()
+    }
+
+    fun openGithubReleasesInBrowser() {
+        updateRepository.openGithubReleasesInBrowser()
+    }
+
     fun downloadAndInstallUpdate(url: String, tag: String) {
         viewModelScope.launch {
             updateRepository.startDirectDownloadAndInstall(url, tag)

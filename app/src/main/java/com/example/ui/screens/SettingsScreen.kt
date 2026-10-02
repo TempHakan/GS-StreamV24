@@ -26,9 +26,14 @@ fun SettingsScreen(
     onCheckForUpdates: () -> Unit,
     onSimulateVersionBump: () -> Unit,
     onToggleAutoUpdate: (Boolean) -> Unit,
+    savedToken: String = "",
+    onSaveToken: (String) -> Unit = {},
+    onOpenReleases: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var backendInput by remember(state.backendUrl) { mutableStateOf(state.backendUrl) }
+    var tokenInput by remember(savedToken) { mutableStateOf(savedToken) }
 
     Column(
         modifier = modifier
@@ -147,6 +152,56 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("VK +1 Artır (Test)")
                     }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "🔒 Özel (Private) Depo Erişimi & GitHub Token",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "GitHub reponuz Private (Gizli) ise güncellemelerin doğrudan indirilebilmesi için GitHub Personal Access Token (classic 'repo' yetkili) ekleyebilir veya doğrudan tarayıcıdan indirebilirsiniz:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = tokenInput,
+                        onValueChange = { tokenInput = it },
+                        label = { Text("GitHub Token (ghp_... veya token)") },
+                        placeholder = { Text("Özel repo için token yapıştırın") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            onSaveToken(tokenInput)
+                            android.widget.Toast.makeText(context, "GitHub Token kaydedildi", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text("Kaydet")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick = onOpenReleases,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Tarayıcıda GitHub Releases Sayfasını Aç (Giriş Yapılmış)")
                 }
             }
         }

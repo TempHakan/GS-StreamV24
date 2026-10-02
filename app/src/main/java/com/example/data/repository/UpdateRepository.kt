@@ -74,28 +74,67 @@ class UpdateRepository(private val context: Context) {
         return tag.removePrefix("VK").removePrefix("v").replace(Regex("[^0-9]"), "").toIntOrNull() ?: 0
     }
 
+    fun getSavedGithubToken(): String {
+        val prefs = context.getSharedPreferences("streamflow_prefs", Context.MODE_PRIVATE)
+        return prefs.getString("github_token", "") ?: ""
+    }
+
+    fun saveGithubToken(token: String) {
+        val prefs = context.getSharedPreferences("streamflow_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("github_token", token.trim()).apply()
+    }
+
+    fun openGithubReleasesInBrowser() {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/vyslkrc/streamflow-iptv/releases")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Tarayıcı açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     /**
      * GitHub Releases API üzerinden en son sürümü denetler.
+     * Private (Gizli) depolarda GitHub Token desteği ile çalışır.
      */
     suspend fun checkForUpdates(
         backendUrl: String = "http://localhost:3000",
         autoInstallIfNewer: Boolean = false
     ): VersionUpdateInfo = withContext(Dispatchers.IO) {
-        // 1. GitHub Releases API
+        val token = getSavedGithubToken()
+
+        // 1. GitHub Releases API (Token destekli)
         try {
             val githubUrl = "https://api.github.com/repos/vyslkrc/streamflow-iptv/releases/latest"
-            val request = Request.Builder()
+            val reqBuilder = Request.Builder()
                 .url(githubUrl)
                 .header("Accept", "application/vnd.github.v3+json")
                 .header("User-Agent", "StreamFlow-Updater")
-                .build()
 
+            if (token.isNotEmpty()) {
+                reqBuilder.header("Authorization", "Bearer $token")
+            }
+
+            val request = reqBuilder.build()
             val response = httpClient.newCall(request).execute()
+
+            if (response.code == 404 && token.isEmpty()) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "GitHub deponuz gizli (Private). Ayarlar'dan 'GitHub Token' ekleyerek veya depoyu 'Public' yaparak güncellemeleri alabilirsiniz.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
             if (response.isSuccessful) {
                 val body = response.body?.string()
                 if (!body.isNullOrEmpty()) {
                     val json = JSONObject(body)
-                    val tagName = json.optString("tag_name", "") // örn: v2.4.0-VK03
+                    val tagName = json.optString("tag_name", "") // örn: v2.4.0-VK05
                     val releaseNotes = json.optString("body", "")
 
                     val vkMatch = Regex("""VK(\d+)""", RegexOption.IGNORE_CASE).find(tagName)
@@ -143,7 +182,7 @@ class UpdateRepository(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            // GitHub API offline veya kota
+            // GitHub API hatası
         }
 
         // 2. Backend /api/v1/version/check
@@ -217,14 +256,20 @@ class UpdateRepository(private val context: Context) {
         )
 
         var downloadSucceeded = false
+        val token = getSavedGithubToken()
 
         for (candidate in candidateUrls) {
             if (candidate.isBlank()) continue
             try {
-                val request = Request.Builder()
+                val reqBuilder = Request.Builder()
                     .url(candidate)
                     .header("User-Agent", "StreamFlow-Installer/2.4.0")
-                    .build()
+
+                if (token.isNotEmpty() && candidate.contains("github")) {
+                    reqBuilder.header("Authorization", "Bearer $token")
+                }
+
+                val request = reqBuilder.build()
                 val response = httpClient.newCall(request).execute()
 
                 if (response.isSuccessful && response.body != null) {

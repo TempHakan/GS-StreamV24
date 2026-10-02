@@ -148,6 +148,51 @@ class ChannelRepository(
         return@withContext parseAndSaveM3uContent(playlistName, url, content)
     }
 
+    private fun checkIfVod(streamUrl: String, groupTitle: String, channelName: String, rawLine: String): Boolean {
+        val lowerUrl = streamUrl.lowercase()
+        val lowerGroup = groupTitle.lowercase()
+        val lowerName = channelName.lowercase()
+        val lowerRaw = rawLine.lowercase()
+
+        // 1. VOD / Film / Dizi dosya uzantıları
+        val strictlyVodExts = listOf(".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".m4v", ".webm")
+        if (strictlyVodExts.any { lowerUrl.contains(it) }) return true
+
+        // 2. IPTV sağlayıcılarının VOD / Dizi URL yol kalıpları
+        val vodPathKeywords = listOf(
+            "/movie/", "/movies/", "/series/", "/vod/", "/films/", "/filmler/",
+            "/dizi/", "/diziler/", "/cinema/", "/sinema/", "type=movie", "type=series",
+            "/show/", "/shows/", "/episode/", "/episodes/"
+        )
+        if (vodPathKeywords.any { lowerUrl.contains(it) }) return true
+
+        // 3. EXTINF etiket parametreleri
+        if (lowerRaw.contains("tvg-type=\"movie\"") || lowerRaw.contains("tvg-type=\"series\"") ||
+            lowerRaw.contains("tvg-type=\"vod\"") || lowerRaw.contains("type=\"movie\"") ||
+            lowerRaw.contains("type=\"series\"")
+        ) {
+            return true
+        }
+
+        // 4. Kategori (group-title) anahtar kelimeleri
+        val vodGroupKeywords = listOf(
+            "vod", "film", "movie", "sinema", "dizi", "series",
+            "netflix", "blutv", "exxen", "disney", "prime", "amazon",
+            "gain", "hbo", "apple tv", "belgesel film", "4k film", "uhd film",
+            "yerli film", "yabancı film", "aksiyon", "komedi", "korku",
+            "bilim kurgu", "animasyon", "romantik", "boxset"
+        )
+        if (vodGroupKeywords.any { lowerGroup.contains(it) }) return true
+
+        // 5. Başlıkta parantez içinde yapım yılı olan içerikler (örn: Film Adı (2024))
+        val yearRegex = Regex("""\((19\d\d|20\d\d)\)""")
+        if (yearRegex.containsMatchIn(lowerName)) {
+            return true
+        }
+
+        return false
+    }
+
     suspend fun parseAndSaveM3uContent(playlistName: String, url: String, content: String): Int = withContext(Dispatchers.IO) {
         val playlistId = UUID.randomUUID().toString()
         val lines = content.lines()
@@ -156,11 +201,13 @@ class ChannelRepository(
         var currentTvgLogo: String? = null
         var currentGroup = "Genel"
         var currentName = ""
+        var lastExtInfLine = ""
 
         var i = 0
         while (i < lines.size) {
             val line = lines[i].trim()
             if (line.startsWith("#EXTINF:")) {
+                lastExtInfLine = line
                 // tvg-logo
                 val logoMatch = Regex("""tvg-logo="([^"]*)"""", RegexOption.IGNORE_CASE).find(line)
                 currentTvgLogo = logoMatch?.groupValues?.get(1)
@@ -174,7 +221,7 @@ class ChannelRepository(
                 currentName = if (commaIdx != -1) line.substring(commaIdx + 1).trim() else "Kanal ${channels.size + 1}"
             } else if (line.isNotEmpty() && !line.startsWith("#")) {
                 val streamUrl = line
-                val isVod = streamUrl.contains(".mp4") || streamUrl.contains("/movie/")
+                val isVod = checkIfVod(streamUrl, currentGroup, currentName, lastExtInfLine)
                 val channel = Channel(
                     id = UUID.randomUUID().toString(),
                     name = if (currentName.isNotEmpty()) currentName else "Kanal ${channels.size + 1}",
@@ -188,6 +235,7 @@ class ChannelRepository(
                 currentName = ""
                 currentTvgLogo = null
                 currentGroup = "Genel"
+                lastExtInfLine = ""
             }
             i++
         }

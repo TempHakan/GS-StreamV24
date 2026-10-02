@@ -9,16 +9,16 @@ import { VersionInfo } from '../models/types';
 
 // Bellekte saklanan güncel versiyon durumu (VK mekanizması)
 let currentVersionState: VersionInfo = {
-  currentVersion: 'VK04',
-  latestVersion: 'VK05',
-  versionCode: 5,
-  downloadUrl: 'https://github.com/vyslkrc/streamflow-iptv/raw/main/apk/StreamFlow-IPTV-v2.4.0-VK05.apk',
+  currentVersion: 'VK05',
+  latestVersion: 'VK06',
+  versionCode: 6,
+  downloadUrl: 'https://github.com/vyslkrc/streamflow-iptv/raw/main/apk/StreamFlow-IPTV-v2.4.0-VK06.apk',
   changelog: [
-    'Yerel depolamadan M3U, M3U8, Xtream ve STB dosyası içe aktarma desteği',
-    'Oynatıcı tam ekran modu (Immersive) ve çift tıklama desteği',
-    'Gereksiz güncelleme uyarısı giderildi, uygulama açılışında sadece gerçek güncellemeler gösterilir',
-    'Kanal isimleri için 2 satırlı genişletilmiş kart görünümü',
-    'Yeni v2.4.0-VK05 sürümü derlendi'
+    'Ekran üzerinde dikey kaydırma ile Ses (sağ) ve Parlaklık (sol) jest kontrolü',
+    'VOD videoları için akıcı ilerleme çubuğu (Scrubbing Seekbar), +10s / -10s ileri/geri sarma',
+    'M3U listelerindeki Film ve Dizi içeriklerini otomatik algılayıp VOD kütüphanesine ayırma',
+    'GitHub Private (Gizli) depolar için Token desteği ve tarayıcıdan indirme köprüsü',
+    'Yeni v2.4.0-VK06 sürümü derlendi'
   ],
   mandatory: false,
   releaseDate: new Date().toISOString().split('T')[0]

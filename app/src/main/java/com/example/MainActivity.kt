@@ -246,7 +246,10 @@ class MainActivity : ComponentActivity() {
                                 onToggleDefaultPlayer = { viewModel.setDefaultPlayerIsVlc(it) },
                                 onCheckForUpdates = { viewModel.checkForUpdates() },
                                 onSimulateVersionBump = { viewModel.simulateVersionBump() },
-                                onToggleAutoUpdate = { viewModel.setAutoInstallUpdates(it) }
+                                onToggleAutoUpdate = { viewModel.setAutoInstallUpdates(it) },
+                                savedToken = viewModel.getSavedGithubToken(),
+                                onSaveToken = { viewModel.saveGithubToken(it) },
+                                onOpenReleases = { viewModel.openGithubReleasesInBrowser() }
                             )
                         }
 
