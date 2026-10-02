@@ -178,20 +178,17 @@ class UpdateRepository(private val context: Context) {
             // Backend offline
         }
 
-        // 3. Fallback Hazır Durum: Bir sonraki VK sürümünü (VK03 vb.) sun
-        val nextTag = computeNextTag(currentTag)
+        // 3. Fallback: Ağ bağlantısı yoksa veya henüz yeni sürüm yayınlanmamışsa güncel kal
         val info = VersionUpdateInfo(
             currentTag = currentTag,
-            nextTag = nextTag,
-            versionCode = currentCode + 1,
-            downloadUrl = "https://github.com/vyslkrc/streamflow-iptv/raw/main/apk/StreamFlow-IPTV-v2.4.0-$nextTag.apk",
+            nextTag = currentTag,
+            versionCode = currentCode,
+            downloadUrl = "",
             changelog = listOf(
-                "Yeni $nextTag sürümü hazır!",
-                "İndirme ve otomatik APK kurucusu optimize edildi",
-                "STB MAG portal protokolü ve canlı oynatıcı desteği",
-                "HLS canlı yayın gecikme optimizasyonları"
+                "En güncel sürümü ($currentTag) kullanıyorsunuz.",
+                "Sistem kararlı ve çalışıyor."
             ),
-            isAvailable = true
+            isAvailable = false
         )
         _updateState.value = info
         return@withContext info

@@ -37,6 +37,7 @@ data class StreamUiState(
     val autoInstallUpdates: Boolean = true,
     val selectedPlaylistId: String? = null,
     val isPlayerMuted: Boolean = false,
+    val isFullscreen: Boolean = false,
     val aspectRatioMode: Int = 0 // 0: FIT, 1: ZOOM/FILL, 2: 16:9, 3: 4:3
 )
 
@@ -141,6 +142,14 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
         _uiState.update { it.copy(isPlayerMuted = !it.isPlayerMuted) }
     }
 
+    fun setFullscreen(fullscreen: Boolean) {
+        _uiState.update { it.copy(isFullscreen = fullscreen) }
+    }
+
+    fun toggleFullscreen() {
+        _uiState.update { it.copy(isFullscreen = !it.isFullscreen) }
+    }
+
     fun setSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
     }
@@ -186,6 +195,12 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
             val info = updateRepository.checkForUpdates(_uiState.value.backendUrl, autoInstallIfNewer = false)
             if (info.isAvailable) {
                 _uiState.update { it.copy(showUpdateDialog = true) }
+            } else {
+                android.widget.Toast.makeText(
+                    getApplication(),
+                    "Uygulamanız güncel (${info.currentTag}). Yeni bir güncelleme bulunmuyor.",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
@@ -205,6 +220,20 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
     fun importM3uPlaylist(name: String, url: String, onComplete: (Int) -> Unit) {
         viewModelScope.launch {
             val count = channelRepository.importM3uFromUrl(name, url)
+            onComplete(count)
+        }
+    }
+
+    fun importM3uContent(name: String, content: String, onComplete: (Int) -> Unit) {
+        viewModelScope.launch {
+            val count = channelRepository.importM3uContent(name, content)
+            onComplete(count)
+        }
+    }
+
+    fun importXtreamCodes(name: String, host: String, username: String, pass: String, onComplete: (Int) -> Unit) {
+        viewModelScope.launch {
+            val count = channelRepository.importXtreamCodes(name, host, username, pass)
             onComplete(count)
         }
     }

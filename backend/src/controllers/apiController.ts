@@ -9,15 +9,16 @@ import { VersionInfo } from '../models/types';
 
 // Bellekte saklanan güncel versiyon durumu (VK mekanizması)
 let currentVersionState: VersionInfo = {
-  currentVersion: 'VK01',
-  latestVersion: 'VK02',
-  versionCode: 2,
-  downloadUrl: 'https://github.com/vyslkrc/streamflow-iptv/releases/download/v2.4.0-VK02/streamflow-v2.4.0-VK02.apk',
+  currentVersion: 'VK04',
+  latestVersion: 'VK05',
+  versionCode: 5,
+  downloadUrl: 'https://github.com/vyslkrc/streamflow-iptv/raw/main/apk/StreamFlow-IPTV-v2.4.0-VK05.apk',
   changelog: [
-    'Android TV D-Pad odak çerçeveleri ve kumanda geçişleri iyileştirildi',
-    'ExoPlayer HLS arabellekleme performansı artırıldı',
-    'VLC Intent çağrısı güncellendi',
-    'EPG zaman çizelgesi 7 günlük geriye sarma desteği eklendi'
+    'Yerel depolamadan M3U, M3U8, Xtream ve STB dosyası içe aktarma desteği',
+    'Oynatıcı tam ekran modu (Immersive) ve çift tıklama desteği',
+    'Gereksiz güncelleme uyarısı giderildi, uygulama açılışında sadece gerçek güncellemeler gösterilir',
+    'Kanal isimleri için 2 satırlı genişletilmiş kart görünümü',
+    'Yeni v2.4.0-VK05 sürümü derlendi'
   ],
   mandatory: false,
   releaseDate: new Date().toISOString().split('T')[0]

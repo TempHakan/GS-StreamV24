@@ -1,7 +1,6 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -44,13 +43,13 @@ fun ChannelListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Channel Logo / Badge
+            // Channel Logo / Avatar (Compact 44dp)
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(44.dp)
                     .clip(MaterialTheme.shapes.small)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
@@ -60,7 +59,9 @@ fun ChannelListItem(
                         model = channel.logoUrl,
                         contentDescription = channel.name,
                         contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize().padding(4.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp)
                     )
                 } else {
                     Text(
@@ -72,51 +73,69 @@ fun ChannelListItem(
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
-            // Channel Title & EPG Info
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = channel.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
-                        shape = MaterialTheme.shapes.extraSmall
-                    ) {
+            // Channel Title & EPG Info (Takes maximum available space, up to 2 lines for full name visibility)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 4.dp)
+            ) {
+                // Kanal İsmi - 2 Satıra kadar tam sığacak şekilde düzenlendi
+                Text(
+                    text = channel.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = MaterialTheme.typography.titleSmall.lineHeight
+                )
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                // Kategori ve Yayın Bilgisi Satırı
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (channel.groupTitle.isNotEmpty()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                text = channel.groupTitle,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+
+                    if (channel.currentProgram != null) {
                         Text(
-                            text = channel.groupTitle,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            text = channel.currentProgram,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Current program info
-                if (channel.currentProgram != null) {
-                    Text(
-                        text = channel.currentProgram,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                // Canlı Yayın İlerleme Çubuğu
+                if (channel.currentProgram != null && channel.programProgress > 0f) {
+                    Spacer(modifier = Modifier.height(3.dp))
                     LinearProgressIndicator(
                         progress = { channel.programProgress },
                         modifier = Modifier
-                            .fillMaxWidth(0.7f)
-                            .height(3.dp)
+                            .fillMaxWidth(0.6f)
+                            .height(2.5.dp)
                             .clip(CircleShape),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
@@ -124,45 +143,50 @@ fun ChannelListItem(
                 }
             }
 
-            // Action Buttons
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // EPG Guide Button
+            // Hızlı Aksiyon Butonları (Kompakt ve taşmayan boyutlarda)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                // EPG Butonu
                 IconButton(
                     onClick = onOpenEpg,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(34.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Schedule,
                         contentDescription = "EPG Rehberi",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
-                // Favorite Button
+                // Favori Butonu
                 IconButton(
                     onClick = onToggleFavorite,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(34.dp)
                 ) {
                     Icon(
                         imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "Favori",
                         tint = if (channel.isFavorite) Color(0xFFFF4081) else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
-                // VLC Quick Launcher Button (Prompt requirement)
-                FilledTonalButton(
+                // VLC Hızlı Açma Butonu
+                IconButton(
                     onClick = {
                         VlcIntentHelper.launchVlc(context, channel.streamUrl, channel.name)
                     },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    modifier = Modifier
-                        .height(32.dp)
-                        .padding(start = 4.dp)
+                    modifier = Modifier.size(34.dp)
                 ) {
-                    Text("VLC", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    Icon(
+                        imageVector = Icons.Default.OpenInNew,
+                        contentDescription = "VLC ile Aç",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }

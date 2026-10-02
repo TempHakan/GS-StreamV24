@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -28,6 +29,7 @@ fun PlayerScreen(
     effectiveStreamUrl: String,
     onCycleAspectRatio: () -> Unit,
     onToggleMute: () -> Unit,
+    onToggleFullscreen: () -> Unit,
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (Channel) -> Unit,
     onOpenEpg: (Channel) -> Unit,
@@ -36,8 +38,34 @@ fun PlayerScreen(
     val context = LocalContext.current
     val channel = state.activeChannel
 
+    // Tam ekranda iken Android fiziksel geri tuşuna basıldığında önce tam ekrandan çık
+    if (state.isFullscreen) {
+        BackHandler(enabled = true) {
+            onToggleFullscreen()
+        }
+
+        // Tam ekran modu: Ekranın %100'ü yalnızca videoya ayrılır
+        Box(modifier = modifier.fillMaxSize()) {
+            if (channel != null) {
+                VideoPlayerView(
+                    channel = channel,
+                    streamUrl = effectiveStreamUrl,
+                    aspectRatioMode = state.aspectRatioMode,
+                    isMuted = state.isPlayerMuted,
+                    isFullscreen = true,
+                    onToggleMute = onToggleMute,
+                    onToggleFullscreen = onToggleFullscreen,
+                    onCycleAspectRatio = onCycleAspectRatio,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+        return
+    }
+
+    // Normal mod: Üstte video oynatıcı, altta kanal bilgisi ve hızlı kanal değiştirici
     Column(modifier = modifier.fillMaxSize()) {
-        // Video Player Box (Takes major screen area)
+        // Video Player Box
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -49,7 +77,9 @@ fun PlayerScreen(
                     streamUrl = effectiveStreamUrl,
                     aspectRatioMode = state.aspectRatioMode,
                     isMuted = state.isPlayerMuted,
+                    isFullscreen = false,
                     onToggleMute = onToggleMute,
+                    onToggleFullscreen = onToggleFullscreen,
                     onCycleAspectRatio = onCycleAspectRatio,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -74,31 +104,45 @@ fun PlayerScreen(
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                             Text(
                                 text = channel.name,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                             if (channel.currentProgram != null) {
                                 Text(
                                     text = channel.currentProgram,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Mute / Unmute Button
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Tam Ekran Butonu
+                            IconButton(onClick = onToggleFullscreen) {
+                                Icon(
+                                    imageVector = Icons.Default.Fullscreen,
+                                    contentDescription = "Tam Ekran",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            // Ses Açma / Kapama Butonu
                             IconButton(onClick = onToggleMute) {
                                 Icon(
                                     imageVector = if (state.isPlayerMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
@@ -107,7 +151,7 @@ fun PlayerScreen(
                                 )
                             }
 
-                            // EPG Button
+                            // EPG Butonu
                             IconButton(onClick = { onOpenEpg(channel) }) {
                                 Icon(
                                     imageVector = Icons.Default.Schedule,
@@ -116,7 +160,7 @@ fun PlayerScreen(
                                 )
                             }
 
-                            // Favorite Button
+                            // Favori Butonu
                             IconButton(onClick = { onToggleFavorite(channel) }) {
                                 Icon(
                                     imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -125,22 +169,22 @@ fun PlayerScreen(
                                 )
                             }
 
-                            // VLC Intent Button (Prompt Requirement)
+                            // VLC ile Aç Butonu
                             Button(
                                 onClick = {
                                     VlcIntentHelper.launchVlc(context, channel.streamUrl, channel.name)
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("VLC ile Aç")
+                                Icon(imageVector = Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("VLC", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
                         text = "Hızlı Kanal Değiştirici:",
@@ -151,25 +195,34 @@ fun PlayerScreen(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
-                    // Quick Channel Switch Carousel
+                    // Hızlı Kanal Değiştirici Listesi
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(state.liveChannels, key = { it.id }) { ch ->
-                            val isCurrent = ch.id == channel.id
+                            val isSelected = ch.id == channel.id
                             TvFocusableCard(
                                 onClick = { onSelectChannel(ch) },
-                                containerColor = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+                                modifier = Modifier.width(150.dp)
                             ) {
-                                Text(
-                                    text = ch.name,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    maxLines = 1
-                                )
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Text(
+                                        text = ch.name,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = ch.groupTitle,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }

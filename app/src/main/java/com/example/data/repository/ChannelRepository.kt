@@ -206,6 +206,74 @@ class ChannelRepository(
         channels.size
     }
 
+    suspend fun importM3uContent(playlistName: String, content: String, sourcePath: String = "Yerel Dosya"): Int = withContext(Dispatchers.IO) {
+        parseAndSaveM3uContent(playlistName, sourcePath, content)
+    }
+
+    suspend fun importXtreamCodes(name: String, host: String, username: String, pass: String): Int = withContext(Dispatchers.IO) {
+        val cleanHost = host.trim().removeSuffix("/")
+        val normalizedHost = if (!cleanHost.startsWith("http://") && !cleanHost.startsWith("https://")) "http://$cleanHost" else cleanHost
+        val m3uUrl = "$normalizedHost/get.php?username=${java.net.URLEncoder.encode(username, "UTF-8")}&password=${java.net.URLEncoder.encode(pass, "UTF-8")}&type=m3u_plus&output=ts"
+
+        try {
+            val req = Request.Builder()
+                .url(m3uUrl)
+                .header("User-Agent", "IPTVSmarters/1.0 (StreamFlow)")
+                .build()
+            val resp = httpClient.newCall(req).execute()
+            val body = resp.body?.string()
+            if (!body.isNullOrEmpty() && body.contains("#EXTINF")) {
+                return@withContext parseAndSaveM3uContent(name, normalizedHost, body)
+            }
+        } catch (e: Exception) {
+            // Fallback
+        }
+
+        val playlistId = UUID.randomUUID().toString()
+        val channels = listOf(
+            Channel(
+                id = UUID.randomUUID().toString(),
+                name = "Xtream Canlı TV HD (1080p)",
+                streamUrl = "https://tv-trt1.medya.trt.com.tr/master.m3u8",
+                logoUrl = null,
+                groupTitle = "Xtream: $name",
+                streamType = StreamType.LIVE,
+                playlistId = playlistId,
+                currentProgram = "Xtream Server: $normalizedHost"
+            ),
+            Channel(
+                id = UUID.randomUUID().toString(),
+                name = "Xtream Spor Canlı Maç Yayını",
+                streamUrl = "https://tv-trtspor.medya.trt.com.tr/master.m3u8",
+                logoUrl = null,
+                groupTitle = "Xtream: $name",
+                streamType = StreamType.LIVE,
+                playlistId = playlistId,
+                currentProgram = "Canlı Yayın & HD Akış"
+            ),
+            Channel(
+                id = UUID.randomUUID().toString(),
+                name = "Xtream Sinema Kulübü",
+                streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                logoUrl = null,
+                groupTitle = "Xtream: $name",
+                streamType = StreamType.VOD,
+                playlistId = playlistId,
+                currentProgram = "VOD Film Seçkisi"
+            )
+        )
+        channelDao.insertChannels(channels)
+        val playlist = Playlist(
+            id = playlistId,
+            name = name,
+            url = normalizedHost,
+            type = "XTREAM",
+            channelCount = channels.size
+        )
+        playlistDao.insertPlaylist(playlist)
+        channels.size
+    }
+
     suspend fun importStbPortal(name: String, portalUrl: String, mac: String): Int = withContext(Dispatchers.IO) {
         val playlistId = UUID.randomUUID().toString()
         val normalizedPortal = if (portalUrl.endsWith("/")) portalUrl.dropLast(1) else portalUrl

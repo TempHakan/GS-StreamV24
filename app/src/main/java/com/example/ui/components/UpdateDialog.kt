@@ -125,6 +125,34 @@ fun UpdateDialog(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .size(18.dp)
+                                .padding(top = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Güvenlik İpucu: Sistem 'Bilinmeyen geliştirici / Güvenilmeyen kaynak' uyarısı verirse; 'Daha fazla ayrıntı' ➔ 'Yine de yükle' seçeneğini tıklayarak doğrudan kurabilirsiniz.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
 
                 if (updateInfo.isDownloading) {
