@@ -50,6 +50,8 @@ fun VideoPlayerView(
     aspectRatioMode: Int,
     isMuted: Boolean = false,
     isFullscreen: Boolean = false,
+    isPipMode: Boolean = false,
+    onEnterPip: () -> Unit = {},
     onToggleMute: () -> Unit = {},
     onToggleFullscreen: () -> Unit = {},
     onCycleAspectRatio: () -> Unit,
@@ -251,8 +253,10 @@ fun VideoPlayerView(
             modifier = Modifier.fillMaxSize()
         )
 
-        // Jest Dokunma ve Kaydırma Katmanı (Sol: Parlaklık, Sağ: Ses)
-        Box(
+        // PiP (Küçük Ekran) modunda iken tüm kontrolleri ve arayüz elemanlarını gizle
+        if (!isPipMode) {
+            // Jest Dokunma ve Kaydırma Katmanı (Sol: Parlaklık, Sağ: Ses)
+            Box(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
@@ -514,6 +518,15 @@ fun VideoPlayerView(
                         )
                     }
 
+                    // Küçük Ekran (Picture-in-Picture) Butonu
+                    IconButton(onClick = onEnterPip) {
+                        Icon(
+                            imageVector = Icons.Default.PictureInPictureAlt,
+                            contentDescription = "Küçük Ekran (PiP)",
+                            tint = Color.White
+                        )
+                    }
+
                     // Tam Ekran Butonu
                     IconButton(onClick = onToggleFullscreen) {
                         Icon(
@@ -757,6 +770,7 @@ fun VideoPlayerView(
                     }
                 }
             }
+        }
         }
     }
 }

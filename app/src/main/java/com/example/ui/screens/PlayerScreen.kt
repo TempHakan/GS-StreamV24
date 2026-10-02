@@ -33,10 +33,34 @@ fun PlayerScreen(
     onSelectChannel: (Channel) -> Unit,
     onToggleFavorite: (Channel) -> Unit,
     onOpenEpg: (Channel) -> Unit,
+    isPipMode: Boolean = false,
+    onEnterPip: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val channel = state.activeChannel
+
+    // PiP Modunda iken doğrudan tam ekran video oynatıcıyı göster
+    if (isPipMode) {
+        Box(modifier = modifier.fillMaxSize()) {
+            if (channel != null) {
+                VideoPlayerView(
+                    channel = channel,
+                    streamUrl = effectiveStreamUrl,
+                    aspectRatioMode = state.aspectRatioMode,
+                    isMuted = state.isPlayerMuted,
+                    isFullscreen = true,
+                    isPipMode = true,
+                    onEnterPip = onEnterPip,
+                    onToggleMute = onToggleMute,
+                    onToggleFullscreen = onToggleFullscreen,
+                    onCycleAspectRatio = onCycleAspectRatio,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+        return
+    }
 
     // Tam ekranda iken Android fiziksel geri tuşuna basıldığında önce tam ekrandan çık
     if (state.isFullscreen) {
@@ -53,6 +77,8 @@ fun PlayerScreen(
                     aspectRatioMode = state.aspectRatioMode,
                     isMuted = state.isPlayerMuted,
                     isFullscreen = true,
+                    isPipMode = false,
+                    onEnterPip = onEnterPip,
                     onToggleMute = onToggleMute,
                     onToggleFullscreen = onToggleFullscreen,
                     onCycleAspectRatio = onCycleAspectRatio,
@@ -78,6 +104,8 @@ fun PlayerScreen(
                     aspectRatioMode = state.aspectRatioMode,
                     isMuted = state.isPlayerMuted,
                     isFullscreen = false,
+                    isPipMode = false,
+                    onEnterPip = onEnterPip,
                     onToggleMute = onToggleMute,
                     onToggleFullscreen = onToggleFullscreen,
                     onCycleAspectRatio = onCycleAspectRatio,

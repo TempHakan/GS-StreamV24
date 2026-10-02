@@ -44,7 +44,12 @@ data class EpgProgram(
     val description: String,
     val startTime: String,
     val endTime: String,
-    val progress: Float = 0.0f
+    val progress: Float = 0.0f,
+    val startMinutes: Int = 0,
+    val durationMinutes: Int = 60,
+    val category: String = "Genel",
+    val isLiveNow: Boolean = false,
+    val canCatchUp: Boolean = true
 )
 
 data class VersionUpdateInfo(

@@ -8,7 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.model.Channel
 import com.example.ui.components.ChannelListItem
+import com.example.ui.components.EpgGridView
 import com.example.viewmodel.StreamUiState
 
 @Composable
@@ -30,6 +31,8 @@ fun LiveTvScreen(
     onOpenAddSource: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isEpgGridMode by remember { mutableStateOf(false) }
+
     // 1. Seçili Çalma Listesine göre filtrele
     val playlistChannels = if (state.selectedPlaylistId == null) {
         state.liveChannels
@@ -52,7 +55,7 @@ fun LiveTvScreen(
     val selectedPlaylist = state.playlists.find { it.id == state.selectedPlaylistId }
 
     Column(modifier = modifier.fillMaxSize()) {
-        // Search & Add Source Bar
+        // Search & Add Source & EPG Toggle Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -84,17 +87,41 @@ fun LiveTvScreen(
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Kaynak Ekle")
             }
+            Spacer(modifier = Modifier.width(6.dp))
+            FilledTonalIconButton(
+                onClick = { isEpgGridMode = !isEpgGridMode },
+                modifier = Modifier.size(52.dp),
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = if (isEpgGridMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Icon(
+                    imageVector = if (isEpgGridMode) Icons.Default.FormatListBulleted else Icons.Default.CalendarViewWeek,
+                    contentDescription = if (isEpgGridMode) "Kanal Listesi" else "EPG Program Rehberi (Grid)",
+                    tint = if (isEpgGridMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
-        // Çalma Listesi / Kaynak Seçici (Playlist Selector)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (isEpgGridMode) {
+            // Görsel EPG Program Rehberi (Grid Görünümü)
+            EpgGridView(
+                channels = filteredChannels,
+                onSelectChannel = onSelectChannel,
+                onToggleFavorite = onToggleFavorite,
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            // Standart Liste Görünümü
+            // Çalma Listesi / Kaynak Seçici (Playlist Selector)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             Icon(
                 imageVector = Icons.Default.Folder,
                 contentDescription = null,
@@ -240,4 +267,5 @@ fun LiveTvScreen(
             }
         }
     }
+}
 }

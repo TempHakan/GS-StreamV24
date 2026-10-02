@@ -117,11 +117,19 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun playChannel(channel: Channel) {
+    fun playChannel(channel: Channel?) {
         viewModelScope.launch {
-            channelRepository.updateLastWatched(channel.id)
-            _uiState.update { it.copy(activeChannel = channel, isPlaying = true) }
+            if (channel != null) {
+                channelRepository.updateLastWatched(channel.id)
+                _uiState.update { it.copy(activeChannel = channel, isPlaying = true) }
+            } else {
+                _uiState.update { it.copy(activeChannel = null, isPlaying = false) }
+            }
         }
+    }
+
+    fun stopPlayback() {
+        _uiState.update { it.copy(activeChannel = null, isPlaying = false) }
     }
 
     fun toggleFavorite(channel: Channel) {
