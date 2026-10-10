@@ -119,6 +119,8 @@ dependencies {
   implementation(libs.androidx.media3.hls)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)
+  implementation(libs.firebase.crashlytics)
+  implementation(libs.firebase.analytics)
   // Uncomment to use Firestore:
   // implementation(libs.firebase.firestore)
 

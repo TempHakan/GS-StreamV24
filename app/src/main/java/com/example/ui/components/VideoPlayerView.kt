@@ -152,7 +152,13 @@ fun VideoPlayerView(
                 exoPlayer.setMediaItem(mediaItem)
                 exoPlayer.prepare()
                 exoPlayer.play()
+                com.example.util.CrashlyticsManager.log("Akış başlatıldı: ${channel?.name ?: streamUrl}")
             } catch (e: Exception) {
+                com.example.util.CrashlyticsManager.recordException(
+                    throwable = e,
+                    tag = "ExoPlayer_PrepareError",
+                    extra = mapOf("channel" to (channel?.name ?: "Bilinmiyor"), "stream_url" to streamUrl)
+                )
                 errorMessage = "Akış başlatılamadı: ${e.localizedMessage ?: "Format desteklenmiyor"}"
                 isBuffering = false
             }
@@ -172,6 +178,16 @@ fun VideoPlayerView(
             }
 
             override fun onPlayerError(error: PlaybackException) {
+                com.example.util.CrashlyticsManager.recordException(
+                    throwable = error,
+                    tag = "ExoPlayer_PlaybackError",
+                    extra = mapOf(
+                        "channel" to (channel?.name ?: "Bilinmiyor"),
+                        "stream_url" to streamUrl,
+                        "error_code" to error.errorCode,
+                        "error_code_name" to error.errorCodeName
+                    )
+                )
                 errorMessage = "Akış yüklenemedi: ${error.localizedMessage ?: "Bağlantı hatası"}"
                 isBuffering = false
             }

@@ -38,13 +38,20 @@ data class StreamUiState(
     val selectedPlaylistId: String? = null,
     val isPlayerMuted: Boolean = false,
     val isFullscreen: Boolean = false,
-    val aspectRatioMode: Int = 0 // 0: FIT, 1: ZOOM/FILL, 2: 16:9, 3: 4:3
+    val aspectRatioMode: Int = 0, // 0: FIT, 1: ZOOM/FILL, 2: 16:9, 3: 4:3
+    val isParentalControlEnabled: Boolean = false,
+    val lockedCategories: Set<String> = emptySet(),
+    val isSessionUnlocked: Boolean = false,
+    val unlockedChannelIds: Set<String> = emptySet(),
+    val showPinDialog: Boolean = false,
+    val pendingChannelToUnlock: Channel? = null,
+    val pinError: String? = null
 )
 
 class StreamViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
-    private val channelRepository = ChannelRepository(db.channelDao(), db.playlistDao())
+    private val channelRepository = ChannelRepository(db.channelDao(), db.playlistDao(), db.parentalControlDao())
     private val updateRepository = UpdateRepository(application)
 
     private val _uiState = MutableStateFlow(StreamUiState())
@@ -115,6 +122,110 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
                 _uiState.update { it.copy(updateInfo = info) }
             }
         }
+
+        // Parental Control Settings flow
+        viewModelScope.launch {
+            channelRepository.parentalSettings.collect { settings ->
+                _uiState.update {
+                    it.copy(isParentalControlEnabled = settings?.isEnabled ?: false)
+                }
+            }
+        }
+
+        // Locked Categories flow
+        viewModelScope.launch {
+            channelRepository.lockedCategories.collect { list ->
+                _uiState.update { it.copy(lockedCategories = list.toSet()) }
+            }
+        }
+    }
+
+    /**
+     * Kanalın ebeveyn denetimi nedeniyle kilitli olup olmadığını kontrol eder.
+     */
+    fun isChannelLocked(channel: Channel): Boolean {
+        val s = _uiState.value
+        if (!s.isParentalControlEnabled) return false
+        if (s.isSessionUnlocked) return false
+        if (s.unlockedChannelIds.contains(channel.id)) return false
+        return channel.isLocked || s.lockedCategories.contains(channel.groupTitle)
+    }
+
+    /**
+     * Kanalı oynatmayı talep eder. Eğer kilitliyse PIN doğrulama diyaloğunu açar.
+     */
+    fun requestPlayChannel(channel: Channel, onUnlocked: () -> Unit) {
+        if (isChannelLocked(channel)) {
+            _uiState.update {
+                it.copy(
+                    showPinDialog = true,
+                    pendingChannelToUnlock = channel,
+                    pinError = null
+                )
+            }
+        } else {
+            playChannel(channel)
+            onUnlocked()
+        }
+    }
+
+    fun verifyPinAndUnlock(inputPin: String, unlockWholeSession: Boolean, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            val isValid = channelRepository.verifyPin(inputPin)
+            if (isValid) {
+                val pending = _uiState.value.pendingChannelToUnlock
+                _uiState.update { state ->
+                    state.copy(
+                        showPinDialog = false,
+                        pinError = null,
+                        isSessionUnlocked = if (unlockWholeSession) true else state.isSessionUnlocked,
+                        unlockedChannelIds = if (pending != null) state.unlockedChannelIds + pending.id else state.unlockedChannelIds
+                    )
+                }
+                if (pending != null) {
+                    playChannel(pending)
+                }
+                onSuccess()
+            } else {
+                _uiState.update { it.copy(pinError = "Hatalı PIN kodu! Lütfen tekrar deneyin.") }
+            }
+        }
+    }
+
+    fun closePinDialog() {
+        _uiState.update { it.copy(showPinDialog = false, pendingChannelToUnlock = null, pinError = null) }
+    }
+
+    fun toggleChannelLock(channel: Channel) {
+        viewModelScope.launch {
+            channelRepository.setChannelLocked(channel.id, !channel.isLocked)
+        }
+    }
+
+    fun toggleCategoryLock(category: String) {
+        viewModelScope.launch {
+            val isLocked = _uiState.value.lockedCategories.contains(category)
+            channelRepository.toggleCategoryLock(category, !isLocked)
+        }
+    }
+
+    fun setParentalControlEnabled(enabled: Boolean, pin: String) {
+        viewModelScope.launch {
+            channelRepository.saveParentalSettings(isEnabled = enabled, pin = pin)
+        }
+    }
+
+    fun updateParentalPin(newPin: String) {
+        viewModelScope.launch {
+            channelRepository.saveParentalSettings(
+                isEnabled = _uiState.value.isParentalControlEnabled,
+                pin = newPin
+            )
+        }
+    }
+
+    fun lockSessionNow() {
+        _uiState.update { it.copy(isSessionUnlocked = false, unlockedChannelIds = emptySet()) }
     }
 
     fun playChannel(channel: Channel?) {

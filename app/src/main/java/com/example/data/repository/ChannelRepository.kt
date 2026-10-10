@@ -14,7 +14,8 @@ import java.util.UUID
 
 class ChannelRepository(
     private val channelDao: ChannelDao,
-    private val playlistDao: PlaylistDao
+    private val playlistDao: PlaylistDao,
+    private val parentalControlDao: com.example.data.local.ParentalControlDao
 ) {
     private val httpClient = OkHttpClient.Builder().build()
 
@@ -22,12 +23,39 @@ class ChannelRepository(
     val favoriteChannels: Flow<List<Channel>> = channelDao.getFavoriteChannels()
     val recentChannels: Flow<List<Channel>> = channelDao.getRecentChannels()
     val allPlaylists: Flow<List<Playlist>> = playlistDao.getAllPlaylists()
+    val parentalSettings: Flow<com.example.data.model.ParentalSettings?> = parentalControlDao.getSettings()
+    val lockedCategories: Flow<List<String>> = parentalControlDao.getLockedCategories()
+    val lockedChannels: Flow<List<Channel>> = channelDao.getLockedChannels()
 
     fun getChannelsByType(type: StreamType): Flow<List<Channel>> = channelDao.getChannelsByType(type)
     fun getCategories(type: StreamType): Flow<List<String>> = channelDao.getCategories(type)
 
     suspend fun toggleFavorite(channelId: String, isFavorite: Boolean) {
         channelDao.toggleFavorite(channelId, isFavorite)
+    }
+
+    suspend fun setChannelLocked(channelId: String, isLocked: Boolean) {
+        channelDao.setChannelLocked(channelId, isLocked)
+    }
+
+    suspend fun toggleCategoryLock(categoryName: String, shouldLock: Boolean) {
+        if (shouldLock) {
+            parentalControlDao.lockCategory(com.example.data.model.LockedCategory(categoryName))
+        } else {
+            parentalControlDao.unlockCategory(categoryName)
+        }
+    }
+
+    suspend fun saveParentalSettings(isEnabled: Boolean, pin: String) {
+        parentalControlDao.saveSettings(
+            com.example.data.model.ParentalSettings(id = 1, isEnabled = isEnabled, pinHash = pin)
+        )
+    }
+
+    suspend fun verifyPin(pin: String): Boolean {
+        val current = parentalControlDao.getSettingsDirect()
+        val currentPin = current?.pinHash ?: "0000"
+        return pin == currentPin
     }
 
     suspend fun updateLastWatched(channelId: String) {

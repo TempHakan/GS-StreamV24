@@ -1,0 +1,173 @@
+name: Build, Sign and Draft Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+      - 'VK*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Sign APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+          cache-read-only: false
+
+      - name: Extract Version Info
+        id: version
+        run: |
+          if [ -f "version.properties" ]; then
+            VK_TAG=$(grep '^VK_TAG=' version.properties | cut -d'=' -f2 | tr -d '\r\n')
+            VK_CODE=$(grep '^VK_CODE=' version.properties | cut -d'=' -f2 | tr -d '\r\n')
+            VERSION_BASE=$(grep '^VERSION_BASE=' version.properties | cut -d'=' -f2 | tr -d '\r\n')
+          fi
+          VK_TAG=${VK_TAG:-VK06}
+          VK_CODE=${VK_CODE:-6}
+          VERSION_BASE=${VERSION_BASE:-2.4.0}
+          VERSION_NAME="${VERSION_BASE}-${VK_TAG}"
+          TAG_NAME="v${VERSION_NAME}"
+
+          echo "VK_TAG=$VK_TAG" >> $GITHUB_ENV
+          echo "VK_CODE=$VK_CODE" >> $GITHUB_ENV
+          echo "VERSION_BASE=$VERSION_BASE" >> $GITHUB_ENV
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+
+          echo "vk_tag=$VK_TAG" >> $GITHUB_OUTPUT
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION_NAME (Tag: $TAG_NAME)"
+
+      - name: Prepare Keystore for Signing
+        id: prepare-keystore
+        run: |
+          # 1. Check for RELEASE_KEYSTORE_BASE64 or KEYSTORE_BASE64 in repository secrets
+          if [ -n "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" ]; then
+            echo "Decoding release keystore from RELEASE_KEYSTORE_BASE64 secret..."
+            echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > "$GITHUB_WORKSPACE/my-upload-key.jks"
+            echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/my-upload-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          elif [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Decoding release keystore from KEYSTORE_BASE64 secret..."
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "$GITHUB_WORKSPACE/my-upload-key.jks"
+            echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/my-upload-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD || secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          else
+            echo "No custom keystore secret provided. Generating release upload key for CI build..."
+            keytool -genkeypair -v \
+              -keystore "$GITHUB_WORKSPACE/my-upload-key.jks" \
+              -alias "upload" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "${{ secrets.STORE_PASSWORD || 'android123' }}" \
+              -keypass "${{ secrets.KEY_PASSWORD || 'android123' }}" \
+              -dname "CN=StreamFlow IPTV, OU=Android, O=StreamFlow, L=Istanbul, ST=Istanbul, C=TR"
+            echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/my-upload-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD || 'android123' }}" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD || 'android123' }}" >> $GITHUB_ENV
+          fi
+
+      - name: Build Signed Release APK
+        env:
+          KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          STORE_PASSWORD: ${{ env.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
+        run: |
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleRelease --stacktrace
+          else
+            gradle assembleRelease --stacktrace
+          fi
+
+      - name: Locate and Package Release APK
+        id: package-apk
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "Release APK not found in release folder, searching in app/build/outputs/apk..."
+            APK_PATH=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          fi
+
+          if [ -z "$APK_PATH" ] || [ ! -f "$APK_PATH" ]; then
+            echo "Error: No APK file was generated!"
+            exit 1
+          fi
+
+          mkdir -p release-artifacts
+          TARGET_APK="release-artifacts/StreamFlow-IPTV-${VERSION_NAME}.apk"
+          cp "$APK_PATH" "$TARGET_APK"
+
+          SHA256=$(sha256sum "$TARGET_APK" | cut -d' ' -f1)
+          echo "SHA256=$SHA256" >> $GITHUB_ENV
+          echo "apk_path=$TARGET_APK" >> $GITHUB_OUTPUT
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+
+          echo "Packaged APK: $TARGET_APK"
+          echo "SHA256 Hash: $SHA256"
+
+      - name: Upload APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreamFlow-IPTV-${{ env.VERSION_NAME }}
+          path: release-artifacts/*.apk
+          retention-days: 14
+
+      - name: Draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: "StreamFlow IPTV v${{ env.VERSION_NAME }}"
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            release-artifacts/*.apk
+          body: |
+            ## StreamFlow IPTV v${{ env.VERSION_NAME }}
+
+            ### 🚀 Otomatik CI/CD Sürüm Özeti
+            * **Versiyon:** `v${{ env.VERSION_NAME }}`
+            * **Sürüm Etiketi:** `${{ env.VK_TAG }}`
+            * **Sürüm Kodu:** `${{ env.VK_CODE }}`
+            * **Yapı Türü:** İmzalı Android APK (Signed Release)
+
+            ### 📦 İndirme & Dosya Doğrulama
+            | Dosya | Boyut | SHA-256 Özeti |
+            | :--- | :--- | :--- |
+            | `StreamFlow-IPTV-${{ env.VERSION_NAME }}.apk` | Otomatik | `${{ env.SHA256 }}` |
+
+            ---
+            *Bu sürüm GitHub Actions tarafından push tetiklemesiyle otomatik olarak taslak (draft) formatında oluşturulmuştur.*

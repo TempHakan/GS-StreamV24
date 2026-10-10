@@ -281,16 +281,36 @@ class MainActivity : ComponentActivity() {
                                         if (state.defaultPlayerIsVlc) {
                                             VlcIntentHelper.launchVlc(context, channel.streamUrl, channel.name)
                                         } else {
-                                            viewModel.playChannel(channel)
-                                            currentTabIndex = 2 // Oynatıcı sekmesine geç
+                                            viewModel.requestPlayChannel(channel) {
+                                                currentTabIndex = 2 // Oynatıcı sekmesine geç
+                                            }
                                         }
                                     },
+                                    onRequestPlayChannel = { channel ->
+                                        if (state.defaultPlayerIsVlc) {
+                                            VlcIntentHelper.launchVlc(context, channel.streamUrl, channel.name)
+                                        } else {
+                                            viewModel.requestPlayChannel(channel) {
+                                                currentTabIndex = 2
+                                            }
+                                        }
+                                    },
+                                    onToggleLock = { viewModel.toggleChannelLock(it) },
                                     onToggleFavorite = { viewModel.toggleFavorite(it) },
                                     onOpenEpg = { viewModel.showEpgDialog(it) },
                                     onSelectPlaylist = { viewModel.selectPlaylist(it) },
                                     onSelectCategory = { viewModel.selectCategory(it) },
                                     onSearchQueryChange = { viewModel.setSearchQuery(it) },
-                                    onOpenAddSource = { viewModel.showAddSourceDialog(true) }
+                                    onOpenAddSource = { viewModel.showAddSourceDialog(true) },
+                                    onSelectVod = { vod ->
+                                        if (state.defaultPlayerIsVlc) {
+                                            VlcIntentHelper.launchVlc(context, vod.streamUrl, vod.name)
+                                        } else {
+                                            viewModel.requestPlayChannel(vod) {
+                                                currentTabIndex = 2
+                                            }
+                                        }
+                                    }
                                 )
                                 1 -> VodScreen(
                                     state = state,
@@ -298,10 +318,12 @@ class MainActivity : ComponentActivity() {
                                         if (state.defaultPlayerIsVlc) {
                                             VlcIntentHelper.launchVlc(context, vod.streamUrl, vod.name)
                                         } else {
-                                            viewModel.playChannel(vod)
-                                            currentTabIndex = 2
+                                            viewModel.requestPlayChannel(vod) {
+                                                currentTabIndex = 2
+                                            }
                                         }
-                                    }
+                                    },
+                                    onToggleFavorite = { viewModel.toggleFavorite(it) }
                                 )
                                 2 -> PlayerScreen(
                                     state = state,
@@ -313,7 +335,10 @@ class MainActivity : ComponentActivity() {
                                     onToggleFavorite = { viewModel.toggleFavorite(it) },
                                     onOpenEpg = { viewModel.showEpgDialog(it) },
                                     isPipMode = false,
-                                    onEnterPip = { enterPictureInPicture() }
+                                    onEnterPip = { enterPictureInPicture() },
+                                    onRequestUnlock = { channel ->
+                                        viewModel.requestPlayChannel(channel) {}
+                                    }
                                 )
                                 3 -> SourcesScreen(
                                     state = state,
@@ -331,7 +356,11 @@ class MainActivity : ComponentActivity() {
                                     onToggleAutoUpdate = { viewModel.setAutoInstallUpdates(it) },
                                     savedToken = viewModel.getSavedGithubToken(),
                                     onSaveToken = { viewModel.saveGithubToken(it) },
-                                    onOpenReleases = { viewModel.openGithubReleasesInBrowser() }
+                                    onOpenReleases = { viewModel.openGithubReleasesInBrowser() },
+                                    onToggleParentalEnable = { enabled, pin -> viewModel.setParentalControlEnabled(enabled, pin) },
+                                    onUpdateParentalPin = { viewModel.updateParentalPin(it) },
+                                    onToggleCategoryLock = { viewModel.toggleCategoryLock(it) },
+                                    onLockSessionNow = { viewModel.lockSessionNow() }
                                 )
                             }
 
@@ -380,6 +409,19 @@ class MainActivity : ComponentActivity() {
                                     onPlay = {
                                         state.epgChannel?.let { viewModel.playChannel(it) }
                                         currentTabIndex = 2
+                                    }
+                                )
+                            }
+
+                            if (state.showPinDialog) {
+                                com.example.ui.components.PinLockDialog(
+                                    channel = state.pendingChannelToUnlock,
+                                    errorMessage = state.pinError,
+                                    onDismiss = { viewModel.closePinDialog() },
+                                    onVerifyPin = { pin, unlockWholeSession ->
+                                        viewModel.verifyPinAndUnlock(pin, unlockWholeSession) {
+                                            currentTabIndex = 2
+                                        }
                                     }
                                 )
                             }

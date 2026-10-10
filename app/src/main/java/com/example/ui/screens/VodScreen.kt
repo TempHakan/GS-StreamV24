@@ -1,14 +1,18 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,13 +32,44 @@ import com.example.viewmodel.StreamUiState
 fun VodScreen(
     state: StreamUiState,
     onSelectVod: (Channel) -> Unit,
+    onToggleFavorite: (Channel) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var onlyFavorites by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    // Gerçek zamanlı istemci tarafı filtreleme (Real-time client-side filtering)
+    val availableCategories = remember(state.vodChannels) {
+        state.vodChannels.map { it.groupTitle }.distinct().sorted()
+    }
+
+    val filteredVods = remember(state.vodChannels, searchQuery, selectedCategory, onlyFavorites) {
+        state.vodChannels.filter { vod ->
+            val matchesSearch = searchQuery.isBlank() ||
+                    vod.name.contains(searchQuery.trim(), ignoreCase = true) ||
+                    vod.groupTitle.contains(searchQuery.trim(), ignoreCase = true)
+            val matchesCategory = selectedCategory == null || vod.groupTitle == selectedCategory
+            val matchesFavorite = !onlyFavorites || vod.isFavorite
+            matchesSearch && matchesCategory && matchesFavorite
+        }
+    }
+
+    val favoriteCount = remember(state.vodChannels) {
+        state.vodChannels.count { it.isFavorite }
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // Başlık ve İstatistik
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -45,30 +80,131 @@ fun VodScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${state.vodChannels.size} İçerik Mevcut | 4K & Full HD",
+                    text = "${filteredVods.size} / ${state.vodChannels.size} İçerik • 4K & Full HD",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
         }
 
-        if (state.vodChannels.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "Henüz VOD veya film listesi eklenmedi.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Gerçek Zamanlı Arama Çubuğu (Real-time Search Bar)
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            placeholder = { Text("Film veya dizi başlığı ara...") },
+            leadingIcon = {
+                Icon(imageVector = Icons.Default.Search, contentDescription = "Arama")
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { searchQuery = "" }) {
+                        Icon(imageVector = Icons.Default.Clear, contentDescription = "Temizle")
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            shape = MaterialTheme.shapes.medium
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Filtre Çipleri: [⭐ Sadece Favoriler] + Kategori Çipleri
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Favoriler Filtre Butonu (Room Database destekli)
+            FilterChip(
+                selected = onlyFavorites,
+                onClick = { onlyFavorites = !onlyFavorites },
+                label = { Text("Favoriler ($favoriteCount)", fontWeight = FontWeight.SemiBold) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (onlyFavorites) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (onlyFavorites) Color(0xFFFF4081) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color(0xFFFF4081).copy(alpha = 0.2f),
+                    selectedLabelColor = Color(0xFFFF4081)
                 )
+            )
+
+            // Tüm Kategoriler Çipi
+            FilterChip(
+                selected = selectedCategory == null,
+                onClick = { selectedCategory = null },
+                label = { Text("Tüm Kategoriler (${state.vodChannels.size})") }
+            )
+
+            // Spesifik Kategoriler
+            availableCategories.forEach { category ->
+                val count = state.vodChannels.count { it.groupTitle == category }
+                FilterChip(
+                    selected = selectedCategory == category,
+                    onClick = { selectedCategory = category },
+                    label = { Text("$category ($count)") }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // İçerik Izgarası veya Boş Durum
+        if (filteredVods.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = if (onlyFavorites) Icons.Default.FavoriteBorder else Icons.Default.MovieFilter,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = if (onlyFavorites)
+                            "Henüz favori listenize film eklemediniz.\nKalp simgesine dokunarak favorilerinize ekleyebilirsiniz."
+                        else
+                            "Arama kriterlerine uygun film veya dizi bulunamadı.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (searchQuery.isNotEmpty() || selectedCategory != null || onlyFavorites) {
+                        OutlinedButton(onClick = {
+                            searchQuery = ""
+                            selectedCategory = null
+                            onlyFavorites = false
+                        }) {
+                            Text("Filtreleri Temizle")
+                        }
+                    }
+                }
             }
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 160.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
+                contentPadding = PaddingValues(bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(state.vodChannels, key = { it.id }) { item ->
+                items(filteredVods, key = { it.id }) { item ->
                     TvFocusableCard(
                         onClick = { onSelectVod(item) },
                         modifier = Modifier.fillMaxWidth()
@@ -97,18 +233,35 @@ fun VodScreen(
                                     )
                                 }
 
+                                // Kategori Etiketi (Üst Sağ)
                                 Surface(
-                                    color = Color.Black.copy(alpha = 0.65f),
-                                    shape = MaterialTheme.shapes.extraSmall,
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(8.dp)
+                                    color = Color.Black.copy(alpha = 0.7f),
+                                    shape = RoundedCornerShape(bottomStart = 8.dp),
+                                    modifier = Modifier.align(Alignment.TopEnd)
                                 ) {
                                     Text(
                                         text = item.groupTitle,
                                         color = Color.White,
                                         style = MaterialTheme.typography.labelSmall,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                    )
+                                }
+
+                                // Favori Toggle Butonu (Üst Sol - Room Database ile Kalıcı)
+                                IconButton(
+                                    onClick = { onToggleFavorite(item) },
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(4.dp)
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.6f))
+                                ) {
+                                    Icon(
+                                        imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                        contentDescription = "Favori",
+                                        tint = if (item.isFavorite) Color(0xFFFF4081) else Color.White,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -135,7 +288,7 @@ fun VodScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Oynat",
+                                        text = "Hemen İzle",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.primary,
                                         fontWeight = FontWeight.Bold

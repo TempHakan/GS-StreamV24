@@ -20,7 +20,22 @@ data class Channel(
     val isFavorite: Boolean = false,
     val lastWatchedTime: Long = 0L,
     val currentProgram: String? = null,
-    val programProgress: Float = 0.45f
+    val programProgress: Float = 0.45f,
+    val isLocked: Boolean = false
+)
+
+@Entity(tableName = "locked_categories")
+data class LockedCategory(
+    @PrimaryKey val categoryName: String,
+    val lockedAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "parental_settings")
+data class ParentalSettings(
+    @PrimaryKey val id: Int = 1,
+    val isEnabled: Boolean = false,
+    val pinHash: String = "0000",
+    val lastUnlockedTime: Long = 0L
 )
 
 @Entity(tableName = "playlists")

@@ -6,13 +6,20 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.data.model.Channel
+import com.example.data.model.LockedCategory
+import com.example.data.model.ParentalSettings
 import com.example.data.model.Playlist
 
-@Database(entities = [Channel::class, Playlist::class], version = 2, exportSchema = false)
+@Database(
+    entities = [Channel::class, Playlist::class, LockedCategory::class, ParentalSettings::class],
+    version = 3,
+    exportSchema = false
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun channelDao(): ChannelDao
     abstract fun playlistDao(): PlaylistDao
+    abstract fun parentalControlDao(): ParentalControlDao
 
     companion object {
         @Volatile

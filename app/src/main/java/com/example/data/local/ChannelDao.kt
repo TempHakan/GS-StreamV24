@@ -34,6 +34,12 @@ interface ChannelDao {
     @Query("UPDATE channels SET isFavorite = :isFav WHERE id = :id")
     suspend fun toggleFavorite(id: String, isFav: Boolean)
 
+    @Query("UPDATE channels SET isLocked = :isLocked WHERE id = :id")
+    suspend fun setChannelLocked(id: String, isLocked: Boolean)
+
+    @Query("SELECT * FROM channels WHERE isLocked = 1")
+    fun getLockedChannels(): Flow<List<Channel>>
+
     @Query("UPDATE channels SET lastWatchedTime = :time WHERE id = :id")
     suspend fun updateLastWatched(id: String, time: Long)
 

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,9 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.components.TvFocusableCard
 import com.example.ui.theme.AppThemeMode
 import com.example.viewmodel.StreamUiState
@@ -29,6 +33,10 @@ fun SettingsScreen(
     savedToken: String = "",
     onSaveToken: (String) -> Unit = {},
     onOpenReleases: () -> Unit = {},
+    onToggleParentalEnable: (enabled: Boolean, pin: String) -> Unit = { _, _ -> },
+    onUpdateParentalPin: (newPin: String) -> Unit = {},
+    onToggleCategoryLock: (category: String) -> Unit = {},
+    onLockSessionNow: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -251,7 +259,94 @@ fun SettingsScreen(
             }
         }
 
-        // 3. Backend Relay Proxy & Ağ
+        // 3. Ebeveyn Denetimi & PIN Kilidi
+        var showParentalDialog by remember { mutableStateOf(false) }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (state.isParentalControlEnabled) Icons.Default.Lock else Icons.Default.LockOpen,
+                                contentDescription = null,
+                                tint = if (state.isParentalControlEnabled) MaterialTheme.colorScheme.primary else Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Ebeveyn Denetimi & PIN Kilidi",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Text(
+                            text = if (state.isParentalControlEnabled)
+                                "Aktif • ${state.lockedCategories.size} kategori kilitli"
+                            else
+                                "Kapalı • Kanalları ve kategorileri PIN ile koruyun",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Switch(
+                        checked = state.isParentalControlEnabled,
+                        onCheckedChange = { showParentalDialog = true }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showParentalDialog = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("PIN & Kilitleri Yönet", style = MaterialTheme.typography.labelMedium)
+                    }
+
+                    if (state.isSessionUnlocked) {
+                        Button(
+                            onClick = onLockSessionNow,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Şimdi Kilitle", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showParentalDialog) {
+            com.example.ui.components.ParentalSettingsDialog(
+                isEnabled = state.isParentalControlEnabled,
+                lockedCategories = state.lockedCategories,
+                availableCategories = state.categories,
+                onDismiss = { showParentalDialog = false },
+                onToggleEnable = { enabled, pin ->
+                    onToggleParentalEnable(enabled, pin)
+                },
+                onUpdatePin = onUpdateParentalPin,
+                onToggleCategoryLock = onToggleCategoryLock
+            )
+        }
+
+        // 4. Backend Relay Proxy & Ağ
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier.fillMaxWidth()
@@ -328,7 +423,141 @@ fun SettingsScreen(
             }
         }
 
-        // 5. GitHub ve APK Hakkında Bilgi
+        // 5. Firebase Crashlytics & Uygulama Kararlılığı
+        var showRecentLogs by remember { mutableStateOf(false) }
+        var crashlyticsCollectionEnabled by remember { mutableStateOf(true) }
+        val recentLogs = remember { com.example.util.CrashlyticsManager.recentLogs }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(if (crashlyticsCollectionEnabled) Color(0xFF4CAF50) else Color.Gray)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Firebase Crashlytics İzleme",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Text(
+                            text = "Çalışma zamanı çökmelerini ve istisnaları gerçek zamanlı raporlar.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = crashlyticsCollectionEnabled,
+                        onCheckedChange = {
+                            crashlyticsCollectionEnabled = it
+                            com.example.util.CrashlyticsManager.setCollectionEnabled(it)
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Yapı ve Sürüm Tanımlayıcıları
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Sürüm Etiketi: ${com.example.BuildConfig.VK_TAG} (Kod: ${com.example.BuildConfig.VK_CODE})",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Uygulama: StreamFlow IPTV v${com.example.BuildConfig.APP_VERSION_NAME}",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                com.example.util.CrashlyticsManager.recordException(
+                                    throwable = IllegalStateException("Test non-fatal exception from SettingsScreen (${com.example.BuildConfig.VK_TAG})"),
+                                    tag = "Manual_Test",
+                                    extra = mapOf(
+                                        "source" to "SettingsScreen",
+                                        "timestamp" to System.currentTimeMillis()
+                                    )
+                                )
+                                android.widget.Toast.makeText(context, "Test istisnası Crashlytics'e iletildi!", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Icon(Icons.Default.BugReport, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Test Hatası Kaydet", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Ekmek Kırıntıları / Olay Günlüğü Toggle
+                TextButton(
+                    onClick = { showRecentLogs = !showRecentLogs },
+                    contentPadding = PaddingValues(0.dp),
+                    modifier = Modifier.height(28.dp)
+                ) {
+                    Text(
+                        text = if (showRecentLogs) "▲ Günlük Olay Kayıtlarını Gizle" else "▼ Günlük Olay Kayıtlarını Göster (${com.example.util.CrashlyticsManager.recentLogs.size})",
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+
+                if (showRecentLogs) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.85f),
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 140.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            com.example.util.CrashlyticsManager.recentLogs.reversed().forEach { logLine ->
+                                Text(
+                                    text = logLine,
+                                    color = if (logLine.contains("❌") || logLine.contains("🚨") || logLine.contains("⚠️")) Color(0xFFFF5252) else Color(0xFFB0BEC5),
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 6. GitHub ve APK Hakkında Bilgi
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
             modifier = Modifier.fillMaxWidth()
@@ -341,12 +570,12 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "• Proje, GitHub'a push edildiğinde `.github/workflows/build-apk.yml` üzerinden otomatik olarak APK çıktısı üretir ve Release oluşturur.",
+                    text = "• Proje, GitHub'a push edildiğinde `.github/workflows/build-release.yml` üzerinden otomatik olarak APK çıktısı üretir, imzalar ve Taslak Release oluşturur.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "• `./bump_version.sh` veya `gradle bumpVkVersion` ile sürüm VK01 -> VK02 olarak artırılır.",
+                    text = "• Firebase Crashlytics aktif edilmiştir. Çalışma zamanı hataları otomatik olarak raporlanır.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

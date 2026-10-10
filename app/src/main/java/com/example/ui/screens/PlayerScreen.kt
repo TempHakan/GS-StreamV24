@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -35,15 +36,26 @@ fun PlayerScreen(
     onOpenEpg: (Channel) -> Unit,
     isPipMode: Boolean = false,
     onEnterPip: () -> Unit = {},
+    onRequestUnlock: (Channel) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val channel = state.activeChannel
 
+    val isChannelLocked = channel != null &&
+            state.isParentalControlEnabled &&
+            !state.isSessionUnlocked &&
+            !state.unlockedChannelIds.contains(channel.id) &&
+            (channel.isLocked || state.lockedCategories.contains(channel.groupTitle))
+
     // PiP Modunda iken doğrudan tam ekran video oynatıcıyı göster
     if (isPipMode) {
         Box(modifier = modifier.fillMaxSize()) {
-            if (channel != null) {
+            if (isChannelLocked) {
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                    Icon(imageVector = Icons.Default.Lock, contentDescription = "Kilitli", tint = Color.Red, modifier = Modifier.size(48.dp))
+                }
+            } else if (channel != null) {
                 VideoPlayerView(
                     channel = channel,
                     streamUrl = effectiveStreamUrl,
@@ -70,7 +82,22 @@ fun PlayerScreen(
 
         // Tam ekran modu: Ekranın %100'ü yalnızca videoya ayrılır
         Box(modifier = modifier.fillMaxSize()) {
-            if (channel != null) {
+            if (isChannelLocked) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(imageVector = Icons.Default.Lock, contentDescription = "Kilitli", tint = Color.Red, modifier = Modifier.size(56.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Bu Kanal PIN ile Kilitlidir", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(onClick = { channel?.let(onRequestUnlock) }) {
+                            Text("PIN Girin ve Açın")
+                        }
+                    }
+                }
+            } else if (channel != null) {
                 VideoPlayerView(
                     channel = channel,
                     streamUrl = effectiveStreamUrl,
@@ -97,7 +124,25 @@ fun PlayerScreen(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            if (channel != null) {
+            if (isChannelLocked) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
+                        Icon(imageVector = Icons.Default.Lock, contentDescription = "Kilitli", tint = Color.Red, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text("Ebeveyn Denetimi Koruması", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("${channel?.name} (${channel?.groupTitle}) kilitli.", style = MaterialTheme.typography.bodySmall, color = Color.LightGray)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = { channel?.let(onRequestUnlock) }) {
+                            Icon(Icons.Default.Key, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("PIN Kodu ile Aç")
+                        }
+                    }
+                }
+            } else if (channel != null) {
                 VideoPlayerView(
                     channel = channel,
                     streamUrl = effectiveStreamUrl,

@@ -24,8 +24,10 @@ import com.example.player.VlcIntentHelper
 fun ChannelListItem(
     channel: Channel,
     isSelected: Boolean,
+    isLocked: Boolean = false,
     onSelect: () -> Unit,
     onToggleFavorite: () -> Unit,
+    onToggleLock: () -> Unit = {},
     onOpenEpg: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -81,16 +83,45 @@ fun ChannelListItem(
                     .weight(1f)
                     .padding(end = 4.dp)
             ) {
-                // Kanal İsmi - 2 Satıra kadar tam sığacak şekilde düzenlendi
-                Text(
-                    text = channel.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = MaterialTheme.typography.titleSmall.lineHeight
-                )
+                // Kanal İsmi ve Kilit Rozeti
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isLocked) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                            shape = MaterialTheme.shapes.extraSmall,
+                            modifier = Modifier.padding(end = 5.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = "Kilitli",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text(
+                                    text = "KİLİTLİ",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = channel.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Bold,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = MaterialTheme.typography.titleSmall.lineHeight
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(3.dp))
 
@@ -170,6 +201,19 @@ fun ChannelListItem(
                         imageVector = if (channel.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "Favori",
                         tint = if (channel.isFavorite) Color(0xFFFF4081) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                // Kilit (Parental Lock) Butonu
+                IconButton(
+                    onClick = onToggleLock,
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                        contentDescription = if (isLocked) "Kanal Kilitli" else "Kanalı Kilitle",
+                        tint = if (isLocked) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.size(18.dp)
                     )
                 }
