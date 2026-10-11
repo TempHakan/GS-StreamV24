@@ -17,4 +17,8 @@ router.get('/version/check', ApiController.checkVersion);
 router.post('/version/bump', ApiController.bumpVersion);
 router.get('/version/download', ApiController.downloadApk);
 
+// Versiyon Kontrol Log ve Teşhis Uç Noktaları (Headers & Query logger)
+router.get('/version/logs', ApiController.getVersionCheckLogs);
+router.delete('/version/logs', ApiController.clearVersionCheckLogs);
+
 export default router;

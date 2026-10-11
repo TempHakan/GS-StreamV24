@@ -7,7 +7,7 @@ import { EpgService } from '../services/epgService';
 import { StreamProxy } from '../services/streamProxy';
 import { VersionInfo } from '../models/types';
 
-// Bellekte saklanan güncel versiyon durumu (VK mekanizması)
+// In-memory version state
 let currentVersionState: VersionInfo = {
   currentVersion: 'VK05',
   latestVersion: 'VK06',
@@ -23,6 +23,27 @@ let currentVersionState: VersionInfo = {
   mandatory: false,
   releaseDate: new Date().toISOString().split('T')[0]
 };
+
+export interface VersionCheckLogEntry {
+  id: string;
+  timestamp: string;
+  method: string;
+  url: string;
+  ip?: string;
+  headers: Record<string, any>;
+  query: Record<string, any>;
+  body: any;
+  hasAuthHeader: boolean;
+  authHeaderMasked?: string;
+  clientVersion?: string;
+  githubRepo?: string;
+  isUpdateAvailable: boolean;
+  notes?: string;
+}
+
+// In-memory ring buffer for version check diagnostic logs
+const versionCheckLogs: VersionCheckLogEntry[] = [];
+const MAX_LOGS = 100;
 
 export class ApiController {
   // M3U Ayrıştırma Uç Noktası
@@ -55,7 +76,6 @@ export class ApiController {
       res.status(400).json({ error: 'host, username ve password parametreleri zorunludur.' });
       return;
     }
-
     try {
       const client = new XtreamClient(String(host), String(username), String(password));
       if (action === 'get_live_categories') {
@@ -80,7 +100,6 @@ export class ApiController {
       res.status(400).json({ error: 'portalUrl ve mac parametreleri zorunludur.' });
       return;
     }
-
     try {
       const stbService = new StbPortalService(String(portalUrl), String(mac));
       const channels = await stbService.getAllChannels();
@@ -112,14 +131,86 @@ export class ApiController {
     await StreamProxy.handleProxy(req, res);
   }
 
-  // Versiyon Kontrolü (VK Mekanizması)
+  // Versiyon Kontrolü (VK Mekanizması) - Detaylı Header & Query Loglaması Dahil
   public static checkVersion(req: Request, res: Response): void {
-    const clientVersion = req.query.client_version as string || 'VK01';
+    const clientVersion = (req.query.client_version as string) || (req.headers['x-client-version'] as string) || 'VK01';
     const isUpdateAvailable = clientVersion !== currentVersionState.latestVersion;
+
+    const authHeader = req.headers['authorization'] || (req.headers['x-github-token'] as string);
+    const maskedAuth = authHeader 
+      ? (typeof authHeader === 'string' && authHeader.length > 8 
+          ? `${authHeader.substring(0, 7)}...${authHeader.substring(authHeader.length - 4)}` 
+          : '***')
+      : undefined;
+
+    // Structured log entry for debugging private GitHub repository token flows
+    const logEntry: VersionCheckLogEntry = {
+      id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      method: req.method,
+      url: req.originalUrl || req.url,
+      ip: req.ip || req.socket.remoteAddress,
+      headers: { ...req.headers },
+      query: { ...req.query },
+      body: req.body,
+      hasAuthHeader: Boolean(authHeader),
+      authHeaderMasked: maskedAuth,
+      clientVersion,
+      githubRepo: (req.query.github_repo as string) || (req.headers['x-github-repo'] as string),
+      isUpdateAvailable,
+      notes: isUpdateAvailable 
+        ? `Yeni sürüm (${currentVersionState.latestVersion}) mevcut (istemci: ${clientVersion})` 
+        : `İstemci zaten en son sürümde veya versiyon eşleşti (${clientVersion})`
+    };
+
+    versionCheckLogs.unshift(logEntry);
+    if (versionCheckLogs.length > MAX_LOGS) {
+      versionCheckLogs.pop();
+    }
+
+    // Console logging with all incoming headers and query parameters for immediate terminal debugging
+    console.log(`\n=================== [VERSION CHECK REQUEST] ===================`);
+    console.log(`Timestamp: ${logEntry.timestamp}`);
+    console.log(`Method: ${req.method} ${req.originalUrl}`);
+    console.log(`Query Parameters:`, JSON.stringify(req.query, null, 2));
+    console.log(`Incoming Headers:`, JSON.stringify(req.headers, null, 2));
+    console.log(`Auth Provided: ${logEntry.hasAuthHeader ? maskedAuth : 'None'}`);
+    console.log(`Client Version: ${clientVersion} | Server Latest: ${currentVersionState.latestVersion}`);
+    console.log(`Result: ${isUpdateAvailable ? 'UPDATE_AVAILABLE' : 'NO_NEW_VERSION'}`);
+    console.log(`===============================================================\n`);
+
     res.json({
       ...currentVersionState,
       isUpdateAvailable,
-      clientVersion
+      clientVersion,
+      debug: {
+        receivedHeadersCount: Object.keys(req.headers).length,
+        hasAuthHeader: Boolean(authHeader),
+        query: req.query
+      }
+    });
+  }
+
+  // Yeni Log Endpoint'i: Gelen tüm version check loglarını, başlıkları ve parametreleri listeler
+  public static getVersionCheckLogs(req: Request, res: Response): void {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const logs = versionCheckLogs.slice(0, limit);
+    res.json({
+      success: true,
+      totalLogs: versionCheckLogs.length,
+      returnedLogs: logs.length,
+      serverVersionState: currentVersionState,
+      logs
+    });
+  }
+
+  // Logları temizleme endpoint'i
+  public static clearVersionCheckLogs(req: Request, res: Response): void {
+    const count = versionCheckLogs.length;
+    versionCheckLogs.length = 0;
+    res.json({
+      success: true,
+      message: `${count} adet versiyon kontrol logu temizlendi.`
     });
   }
 
@@ -165,4 +256,3 @@ export class ApiController {
     res.status(404).json({ error: 'APK dosyası sunucuda bulunamadı.' });
   }
 }
-

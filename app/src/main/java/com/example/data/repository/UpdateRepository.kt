@@ -255,13 +255,21 @@ class UpdateRepository(private val context: Context) {
             diagnosticMessage = "Bağlantı hatası: ${e.localizedMessage ?: e.message}"
         }
 
-        // 2. Backend /api/v1/version/check
+        // 2. Backend /api/v1/version/check (Headers ve Query parametreleri ile detaylı teşhis)
         try {
-            val url = URL("$backendUrl/api/v1/version/check?client_version=$currentTag")
-            val conn = url.openConnection() as HttpURLConnection
+            val encodedRepo = java.net.URLEncoder.encode(repo, "UTF-8")
+            val backendFullUrl = "$backendUrl/api/v1/version/check?client_version=$currentTag&github_repo=$encodedRepo"
+            val conn = URL(backendFullUrl).openConnection() as HttpURLConnection
             conn.connectTimeout = 3000
             conn.readTimeout = 3000
             conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", "StreamFlow-Updater/2.4.0")
+            conn.setRequestProperty("X-Client-Version", currentTag)
+            conn.setRequestProperty("X-GitHub-Repo", repo)
+            if (token.isNotEmpty()) {
+                conn.setRequestProperty("Authorization", "Bearer $token")
+                conn.setRequestProperty("X-GitHub-Token", token)
+            }
 
             if (conn.responseCode == 200) {
                 val res = conn.inputStream.bufferedReader().use { it.readText() }
