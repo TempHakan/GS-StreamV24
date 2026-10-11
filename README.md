@@ -1,8 +1,9 @@
 # StreamFlow IPTV (Android & Android TV + Backend)
 
-[![Download APK](https://img.shields.io/badge/İndir-StreamFlow--v2.4.0--VK06.apk-00E5FF?style=for-the-badge&logo=android&logoColor=black)](apk/StreamFlow-IPTV-v2.4.0-VK06.apk)
-[![Version](https://img.shields.io/badge/Sürüm-v2.4.0--VK06-7C4DFF?style=for-the-badge)](version.properties)
+[![Download APK](https://img.shields.io/badge/İndir-StreamFlow--v2.4.0--VK07.apk-00E5FF?style=for-the-badge&logo=android&logoColor=black)](apk/StreamFlow-IPTV-v2.4.0-VK07.apk)
+[![Version](https://img.shields.io/badge/Sürüm-v2.4.0--VK07-7C4DFF?style=for-the-badge)](version.properties)
 [![Platform](https://img.shields.io/badge/Platform-Mobile%20%7C%20Android%20TV%2016%3A9-FF007F?style=for-the-badge&logo=android)](app)
+[![Last Updated](https://img.shields.io/badge/Son%20Güncelleme-11%20Ekim%202026%2014%3A10%20(UTC%2B3)-00C853?style=for-the-badge)](https://github.com/vyslkrc/streamflow-iptv/releases)
 [![License](https://img.shields.io/badge/Lisans-MIT-green?style=for-the-badge)](LICENSE)
 
 ---
@@ -11,15 +12,18 @@
 
 StreamFlow IPTV güncel derlenmiş hazır APK dosyasını aşağıdaki bağlantılardan hemen indirebilirsiniz:
 
-| Sürüm | Dosya Adı | Boyut | Durum | İndirme Bağlantısı |
-| :--- | :--- | :--- | :--- | :--- |
-| **v2.4.0-VK06 (Güncel Son Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK06.apk` | **~27 MB** | 🚀 **En Yeni** | [⬇️ **Doğrudan APK İndir**](apk/StreamFlow-IPTV-v2.4.0-VK06.apk) \| [🌐 Raw İndir](https://raw.githubusercontent.com/vyslkrc/streamflow-iptv/main/apk/StreamFlow-IPTV-v2.4.0-VK06.apk) |
-| **v2.4.0-VK05 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK05.apk` | **~27 MB** | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK05.apk) |
-| **v2.4.0-VK04 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK04.apk` | **~27 MB** | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK04.apk) |
-| **v2.4.0-VK03 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK03.apk` | **~26 MB** | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK03.apk) |
-| **v2.4.0-VK02 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK02.apk` | **~27 MB** | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK02.apk) |
-| **v2.4.0-VK01 (İlk Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK01.apk` | **~27 MB** | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK01.apk) |
-| **GitHub Releases** | Otomatik CI/CD Dağıtımı | **~27 MB** | ⚡ Canlı | [🚀 **GitHub Releases Sayfası**](https://github.com/vyslkrc/streamflow-iptv/releases) |
+> 🕒 **Son Güncelleme Zamanı:** **11 Ekim 2026, 14:10 (TSİ / UTC+3)** — [v2.4.0-VK07]
+
+| Sürüm | Dosya Adı | Boyut | Güncelleme Zamanı | Durum | İndirme Bağlantısı |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **v2.4.0-VK07 (Güncel Son Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK07.apk` | **~28 MB** | 11.10.2026 14:10 | 🚀 **En Yeni** | [⬇️ **Doğrudan APK İndir**](apk/StreamFlow-IPTV-v2.4.0-VK07.apk) \| [🌐 Raw İndir](https://raw.githubusercontent.com/vyslkrc/streamflow-iptv/main/apk/StreamFlow-IPTV-v2.4.0-VK07.apk) |
+| **v2.4.0-VK06 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK06.apk` | **~28 MB** | 11.10.2026 13:08 | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK06.apk) |
+| **v2.4.0-VK05 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK05.apk` | **~27 MB** | 11.10.2026 13:03 | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK05.apk) |
+| **v2.4.0-VK04 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK04.apk` | **~27 MB** | 11.10.2026 13:03 | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK04.apk) |
+| **v2.4.0-VK03 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK03.apk` | **~26 MB** | 11.10.2026 13:03 | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK03.apk) |
+| **v2.4.0-VK02 (Önceki Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK02.apk` | **~27 MB** | 11.10.2026 13:03 | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK02.apk) |
+| **v2.4.0-VK01 (İlk Sürüm)** | `StreamFlow-IPTV-v2.4.0-VK01.apk` | **~27 MB** | 11.10.2026 13:03 | 📦 Arşiv | [⬇️ APK İndir](apk/StreamFlow-IPTV-v2.4.0-VK01.apk) |
+| **GitHub Releases** | Otomatik CI/CD Dağıtımı | **~28 MB** | Anlık | ⚡ Canlı | [🚀 **GitHub Releases Sayfası**](https://github.com/vyslkrc/streamflow-iptv/releases) |
 
 > 💡 **Kurulum Notu:** İndirdiğiniz APK dosyasını Android telefonunuza veya Android TV / TV Box cihazınıza aktararak tek tıkla kurabilirsiniz ("Bilinmeyen kaynaklara izin ver" seçeneğini aktif ediniz).
 
@@ -27,7 +31,17 @@ StreamFlow IPTV güncel derlenmiş hazır APK dosyasını aşağıdaki bağlant�
 
 ## 📋 2. Sürüm Değişiklik Günlüğü (Changelog)
 
-### 🌟 Sürüm v2.4.0-VK06 (Son Sürüm Değişiklikleri)
+### 🌟 Sürüm v2.4.0-VK07 (Son Sürüm Değişiklikleri - 11 Ekim 2026 14:10 TSİ)
+* 📡 **Private Repo Güncelleme ve Loglama Teşhis Desteği:**
+  * Backend `/api/v1/version/logs` rotası eklendi. Gelen tüm sorgular, HTTP Header'ları (`Authorization`, `X-GitHub-Token`, `X-GitHub-Repo`, `X-Client-Version`) ve query parametreleri gerçek zamanlı olarak loglanıp incelenebilir.
+  * Android `UpdateRepository` üzerinden backend versiyon kontrolüne tam teşhis parametreleri entegre edildi.
+* 📦 **v2.4.0-VK07 APK Derlendi:**
+  * `version.properties`: `VK_CODE=7`, `VK_TAG=VK07`.
+  * `README.md` indirme tablosu son güncelleme saati ve tarih bilgileriyle güncellendi.
+
+---
+
+### 🌟 Sürüm v2.4.0-VK06
 * 🎬 **Gelişmiş VOD (Film & Dizi) Ayrıştırma Motoru:**
   * Çalma listeleri eklenirken video dosya formatları (`.mp4`, `.mkv`, `.avi`, `.mov`, `.flv`, `.wmv`), URL dizinleri (`/movie/`, `/series/`, `/vod/`, `/films/`, `/diziler/`), etiketler ve kategori isimleri (`group-title`) derinlemesine analiz edilir.
   * Tespit edilen tüm VOD film ve dizi yayınları Canlı TV'den ayrıştırılarak otomatik olarak **"VOD: Film & Dizi Kütüphanesi"** bölümüne aktarılır.
@@ -41,8 +55,6 @@ StreamFlow IPTV güncel derlenmiş hazır APK dosyasını aşağıdaki bağlant�
 * 🔒 **GitHub Private (Gizli) Depo Güncelleme Desteği:**
   * Deponuz gizli (Private) olduğu durumlarda GitHub API'sinin 404 hatası vermesini engellemek için Ayarlar ekranına **"GitHub Token (Özel Depo)"** giriş alanı eklendi (`streamflow_prefs` üzerinde güvenle saklanır).
   * Ayrıca telefonun tarayıcısında açık olan GitHub oturumunu kullanarak tek tıkla en güncel APK'yı indirmeyi sağlayan **"Tarayıcıda GitHub Releases Aç"** butonu entegre edildi.
-* 📦 **v2.4.0-VK06 APK Derlendi:**
-  * Versiyon kodu `6` ve sürüm etiketi `VK06` olarak güncellendi.
 
 ---
 
@@ -84,28 +96,29 @@ StreamFlow IPTV güncel derlenmiş hazır APK dosyasını aşağıdaki bağlant�
 
 ## 🚀 3. GitHub'a Push ve Otomatik Pipeline
 
-Aşağıdaki komutları terminalinizde çalıştırarak projeyi ve güncel APK'yı doğrudan GitHub reponuza gönderebilirsiniz:
+Aşağıdaki komutları çalıştırarak projeyi ve güncel APK'yı doğrudan GitHub reponuza gönderebilirsiniz:
 
 ```bash
 # 1. Ana dalı main olarak belirleyin
+git init
 git branch -M main
 
 # 2. Değişiklikleri ekleyin ve commit yapın
 git add .
-git commit -m "feat: release v2.4.0-VK06 with gesture volume/brightness, VOD seekbar, M3U VOD separation and private repo updater"
+git commit -m "feat: release v2.4.0-VK07 with diagnostic endpoints, timestamped README and updated APK"
 
 # 3. GitHub deponuzu bağlayın (Kendi GitHub repo URL'nizi girin):
 git remote add origin https://github.com/vyslkrc/streamflow-iptv.git
 
 # 4. Kodları ve APK'yı GitHub'a pushlayın:
-git push -u origin main
+git push -u origin main --force
 ```
 
 ---
 
 ## 🔒 4. GitHub Deposu Private (Gizli) İse Güncelleme Alma Rehberi
 
-GitHub reponuz **Private (Gizli)** olarak ayarlandığında, GitHub API anonim isteklere güvenlik nedeniyle `404 Not Found` yanıtı verir. Bunu aşmak için iki basit yöntem mevcuttur:
+GitHub reponuz **Private (Gizli)** olarak ayarlandığında, GitHub API anonim isteklere güvenlik nedeniyle `404 Not Found` yanıtı verir. Bunu aşmak için yöntemler:
 
 1. **Yöntem 1 (Önerilen - GitHub Token):**
    * GitHub hesabınızdan **Settings** ➔ **Developer settings** ➔ **Personal access tokens (classic)** bölümüne gidin.
