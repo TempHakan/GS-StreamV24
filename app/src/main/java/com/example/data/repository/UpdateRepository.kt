@@ -84,16 +84,36 @@ class UpdateRepository(private val context: Context) {
         prefs.edit().putString("github_token", cleanGithubToken(token)).apply()
     }
 
+    fun cleanGithubRepo(raw: String): String {
+        var t = raw.trim().trim('"', '\'', '`')
+        t = t.replace(Regex("^https?://(www\\.)?github\\.com/", RegexOption.IGNORE_CASE), "")
+        t = t.replace(Regex("^github\\.com/", RegexOption.IGNORE_CASE), "")
+        t = t.replace(Regex("^www\\.github\\.com/", RegexOption.IGNORE_CASE), "")
+        t = t.removePrefix("@")
+        t = t.removeSuffix(".git")
+        t = t.replace(Regex("/(releases|tags|tree/.*|blob/.*|issues.*)$", RegexOption.IGNORE_CASE), "")
+        t = t.trim('/')
+        val parts = t.split("/").map { it.trim() }.filter { it.isNotEmpty() }
+        return if (parts.size >= 2) {
+            "${parts[0]}/${parts[1]}"
+        } else if (parts.size == 1 && parts[0].isNotEmpty()) {
+            parts[0]
+        } else {
+            "vyslkrc/streamflow-iptv"
+        }
+    }
+
     fun getSavedGithubRepo(): String {
         val prefs = context.getSharedPreferences("streamflow_prefs", Context.MODE_PRIVATE)
         val repo = prefs.getString("github_repo", "vyslkrc/streamflow-iptv") ?: "vyslkrc/streamflow-iptv"
-        return repo.trim().removePrefix("https://github.com/").removeSuffix("/").removeSuffix(".git")
+        return cleanGithubRepo(repo)
     }
 
-    fun saveGithubRepo(repo: String) {
-        val clean = repo.trim().removePrefix("https://github.com/").removeSuffix("/").removeSuffix(".git")
+    fun saveGithubRepo(repo: String): String {
+        val clean = cleanGithubRepo(repo)
         val prefs = context.getSharedPreferences("streamflow_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("github_repo", clean).apply()
+        return clean
     }
 
     private fun cleanGithubToken(raw: String): String {
@@ -106,10 +126,48 @@ class UpdateRepository(private val context: Context) {
         return t
     }
 
+    fun openGithubRepoInBrowser() {
+        val repo = getSavedGithubRepo()
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$repo")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Tarayıcı açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun openGithubReleasesInBrowser() {
         val repo = getSavedGithubRepo()
         try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$repo/releases")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Tarayıcı açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openCreateGithubRepoInBrowser() {
+        val repo = getSavedGithubRepo()
+        val repoName = if (repo.contains("/")) repo.substringAfter("/") else "streamflow-iptv"
+        try {
+            val url = "https://github.com/new?name=${Uri.encode(repoName)}"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Tarayıcı açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openCreateGithubTokenInBrowser() {
+        try {
+            val url = "https://github.com/settings/tokens/new?scopes=repo&description=StreamFlow-IPTV"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
@@ -155,9 +213,9 @@ class UpdateRepository(private val context: Context) {
 
                 if (response.code == 404) {
                     diagnosticMessage = if (token.isEmpty()) {
-                        "404 Not Found: Depo gizli (Private). Lütfen GitHub Token giriniz veya depoyu Public yapınız."
+                        "404 Not Found: '$repo' deposu bulunamadı veya Gizli (Private). Depo adını kontrol edin veya GitHub Token giriniz."
                     } else {
-                        "404 Not Found: Depo veya Token yetkisi geçersiz. Token'ınızın 'repo' yetkisi olduğundan emin olun."
+                        "404 Not Found: '$repo' deposu veya Release bulunamadı. Token'ın 'repo' yetkisini ve deponun varlığını kontrol edin."
                     }
                     continue
                 } else if (response.code == 401) {

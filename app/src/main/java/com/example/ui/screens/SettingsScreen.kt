@@ -34,7 +34,10 @@ fun SettingsScreen(
     onSaveToken: (String) -> Unit = {},
     savedRepo: String = "vyslkrc/streamflow-iptv",
     onSaveRepo: (String) -> Unit = {},
+    onOpenRepo: () -> Unit = {},
     onOpenReleases: () -> Unit = {},
+    onOpenCreateRepo: () -> Unit = {},
+    onOpenCreateToken: () -> Unit = {},
     onToggleParentalEnable: (enabled: Boolean, pin: String) -> Unit = { _, _ -> },
     onUpdateParentalPin: (newPin: String) -> Unit = {},
     onToggleCategoryLock: (category: String) -> Unit = {},
@@ -197,13 +200,32 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            onSaveRepo(repoInput)
-                            android.widget.Toast.makeText(context, "Depo adı kaydedildi: $repoInput", android.widget.Toast.LENGTH_SHORT).show()
+                            var t = repoInput.trim().trim('"', '\'', '`')
+                            t = t.replace(Regex("^https?://(www\\.)?github\\.com/", RegexOption.IGNORE_CASE), "")
+                            t = t.replace(Regex("^github\\.com/", RegexOption.IGNORE_CASE), "")
+                            t = t.replace(Regex("^www\\.github\\.com/", RegexOption.IGNORE_CASE), "")
+                            t = t.removePrefix("@")
+                            t = t.removeSuffix(".git")
+                            t = t.replace(Regex("/(releases|tags|tree/.*|blob/.*|issues.*)$", RegexOption.IGNORE_CASE), "")
+                            t = t.trim('/')
+                            val parts = t.split("/").map { it.trim() }.filter { it.isNotEmpty() }
+                            val clean = if (parts.size >= 2) "${parts[0]}/${parts[1]}" else if (parts.size == 1 && parts[0].isNotEmpty()) parts[0] else "vyslkrc/streamflow-iptv"
+                            repoInput = clean
+                            onSaveRepo(clean)
+                            android.widget.Toast.makeText(context, "Depo doğrulandı ve kaydedildi: $clean", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     ) {
                         Text("Kaydet")
                     }
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "🎯 Hedef Adres: https://github.com/$repoInput",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -222,7 +244,11 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = {
-                            onSaveToken(tokenInput)
+                            var t = tokenInput.trim()
+                            if (t.startsWith("Bearer ", ignoreCase = true)) t = t.substring(7).trim()
+                            if (t.startsWith("token ", ignoreCase = true)) t = t.substring(6).trim()
+                            tokenInput = t
+                            onSaveToken(t)
                             android.widget.Toast.makeText(context, "GitHub Token kaydedildi", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     ) {
@@ -249,13 +275,88 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                OutlinedButton(
-                    onClick = onOpenReleases,
+                // Tarayıcı ve GitHub Eylemleri
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onOpenRepo,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.Public, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Depo Ana Sayfası", maxLines = 1)
+                    }
+
+                    OutlinedButton(
+                        onClick = onOpenReleases,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Releases Sayfası", maxLines = 1)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = onOpenCreateRepo,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Depoyu GitHub'da Aç", maxLines = 1)
+                    }
+
+                    FilledTonalButton(
+                        onClick = onOpenCreateToken,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.VpnKey, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("GitHub Token Al", maxLines = 1)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    shape = MaterialTheme.shapes.small,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(imageVector = Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Tarayıcıda GitHub Releases Sayfasını Aç (Giriş Yapılmış)")
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.HelpOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "💡 'Could not resolve to a Repository' Hatası Hakkında",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Bu hata, GitHub hesabınızda henüz '$repoInput' isimli bir depo bulunmadığında veya tarayıcınızda GitHub oturumunuz açık olmadığında (özel repo için) meydana gelir.\n" +
+                                   "1. 'Depoyu GitHub'da Aç' butonuna basarak depoyu hesabınızda hemen oluşturabilirsiniz.\n" +
+                                   "2. Depo adını yapıştırırken URL ('https://github.com/...') yazsanız bile sistem otomatik temizler.\n" +
+                                   "3. Depoyu oluşturduktan sonra 'Depo Ana Sayfası' veya 'Releases Sayfası' sorunsuz açılacaktır.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

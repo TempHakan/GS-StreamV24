@@ -394,16 +394,28 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
         return updateRepository.getSavedGithubToken()
     }
 
-    fun saveGithubRepo(repo: String) {
-        updateRepository.saveGithubRepo(repo)
+    fun saveGithubRepo(repo: String): String {
+        return updateRepository.saveGithubRepo(repo)
     }
 
     fun getSavedGithubRepo(): String {
         return updateRepository.getSavedGithubRepo()
     }
 
+    fun openGithubRepoInBrowser() {
+        updateRepository.openGithubRepoInBrowser()
+    }
+
     fun openGithubReleasesInBrowser() {
         updateRepository.openGithubReleasesInBrowser()
+    }
+
+    fun openCreateGithubRepoInBrowser() {
+        updateRepository.openCreateGithubRepoInBrowser()
+    }
+
+    fun openCreateGithubTokenInBrowser() {
+        updateRepository.openCreateGithubTokenInBrowser()
     }
 
     fun downloadAndInstallUpdate(url: String, tag: String) {
