@@ -55,6 +55,8 @@ fun VideoPlayerView(
     onToggleMute: () -> Unit = {},
     onToggleFullscreen: () -> Unit = {},
     onCycleAspectRatio: () -> Unit,
+    initialPlaybackPositionMs: Long = 0L,
+    onPlaybackProgress: (positionMs: Long, durationMs: Long) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -116,13 +118,31 @@ fun VideoPlayerView(
         exoPlayer.volume = if (isMuted) 0f else volumePercent
     }
 
-    // Pozisyon ve Süre Güncelleme Döngüsü
+    // Pozisyon ve Süre Güncelleme Döngüsü ve VOD İlerleme Bildirimi
+    var hasAppliedInitialSeek by remember(streamUrl) { mutableStateOf(false) }
+
     LaunchedEffect(isPlaying, streamUrl) {
+        var tickCount = 0
         while (true) {
             if (!isSeeking) {
                 currentPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
                 val d = exoPlayer.duration
                 durationMs = if (d > 0) d else 0L
+
+                // İlk pozisyondan devam etme (Continue Watching seek)
+                if (!hasAppliedInitialSeek && initialPlaybackPositionMs > 1_000L && durationMs > 0L) {
+                    if (initialPlaybackPositionMs < durationMs) {
+                        exoPlayer.seekTo(initialPlaybackPositionMs)
+                        currentPositionMs = initialPlaybackPositionMs
+                    }
+                    hasAppliedInitialSeek = true
+                }
+
+                // Her 2 saniyede bir (5 * 400ms) veya duraklatıldığında Room veritabanı için ilerleme bildir
+                tickCount++
+                if (tickCount % 5 == 0 && currentPositionMs > 0L && durationMs > 0L) {
+                    onPlaybackProgress(currentPositionMs, durationMs)
+                }
             }
             delay(400)
         }

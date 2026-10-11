@@ -32,6 +32,8 @@ fun SettingsScreen(
     onToggleAutoUpdate: (Boolean) -> Unit,
     savedToken: String = "",
     onSaveToken: (String) -> Unit = {},
+    savedRepo: String = "vyslkrc/streamflow-iptv",
+    onSaveRepo: (String) -> Unit = {},
     onOpenReleases: () -> Unit = {},
     onToggleParentalEnable: (enabled: Boolean, pin: String) -> Unit = { _, _ -> },
     onUpdateParentalPin: (newPin: String) -> Unit = {},
@@ -42,6 +44,7 @@ fun SettingsScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     var backendInput by remember(state.backendUrl) { mutableStateOf(state.backendUrl) }
     var tokenInput by remember(savedToken) { mutableStateOf(savedToken) }
+    var repoInput by remember(savedRepo) { mutableStateOf(savedRepo) }
 
     Column(
         modifier = modifier
@@ -178,6 +181,32 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // GitHub Depo Adı (kullanıcı/repo)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = repoInput,
+                        onValueChange = { repoInput = it },
+                        label = { Text("GitHub Deposu (kullanıcı/repo)") },
+                        placeholder = { Text("vyslkrc/streamflow-iptv") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            onSaveRepo(repoInput)
+                            android.widget.Toast.makeText(context, "Depo adı kaydedildi: $repoInput", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text("Kaydet")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -198,6 +227,23 @@ fun SettingsScreen(
                         }
                     ) {
                         Text("Kaydet")
+                    }
+                }
+
+                // Son kontrol teşhis durumu
+                if (!state.updateInfo?.lastCheckStatus.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "ℹ️ Son Denetim: ${state.updateInfo?.lastCheckStatus}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
                     }
                 }
 

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,6 +38,7 @@ fun PlayerScreen(
     isPipMode: Boolean = false,
     onEnterPip: () -> Unit = {},
     onRequestUnlock: (Channel) -> Unit = {},
+    onSaveVodProgress: (vodId: String, title: String, streamUrl: String, logoUrl: String?, groupTitle: String, posMs: Long, durMs: Long) -> Unit = { _, _, _, _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -47,6 +49,13 @@ fun PlayerScreen(
             !state.isSessionUnlocked &&
             !state.unlockedChannelIds.contains(channel.id) &&
             (channel.isLocked || state.lockedCategories.contains(channel.groupTitle))
+
+    val vodHistory = remember(channel?.id, state.continueWatchingList) {
+        if (channel != null && channel.streamType == com.example.data.model.StreamType.VOD) {
+            state.continueWatchingList.find { it.vodId == channel.id }
+        } else null
+    }
+    val initialPosMs = vodHistory?.positionMs ?: 0L
 
     // PiP Modunda iken doğrudan tam ekran video oynatıcıyı göster
     if (isPipMode) {
@@ -67,6 +76,12 @@ fun PlayerScreen(
                     onToggleMute = onToggleMute,
                     onToggleFullscreen = onToggleFullscreen,
                     onCycleAspectRatio = onCycleAspectRatio,
+                    initialPlaybackPositionMs = initialPosMs,
+                    onPlaybackProgress = { posMs, durMs ->
+                        if (channel.streamType == com.example.data.model.StreamType.VOD) {
+                            onSaveVodProgress(channel.id, channel.name, channel.streamUrl, channel.logoUrl, channel.groupTitle, posMs, durMs)
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -109,6 +124,12 @@ fun PlayerScreen(
                     onToggleMute = onToggleMute,
                     onToggleFullscreen = onToggleFullscreen,
                     onCycleAspectRatio = onCycleAspectRatio,
+                    initialPlaybackPositionMs = initialPosMs,
+                    onPlaybackProgress = { posMs, durMs ->
+                        if (channel.streamType == com.example.data.model.StreamType.VOD) {
+                            onSaveVodProgress(channel.id, channel.name, channel.streamUrl, channel.logoUrl, channel.groupTitle, posMs, durMs)
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -154,6 +175,12 @@ fun PlayerScreen(
                     onToggleMute = onToggleMute,
                     onToggleFullscreen = onToggleFullscreen,
                     onCycleAspectRatio = onCycleAspectRatio,
+                    initialPlaybackPositionMs = initialPosMs,
+                    onPlaybackProgress = { posMs, durMs ->
+                        if (channel.streamType == com.example.data.model.StreamType.VOD) {
+                            onSaveVodProgress(channel.id, channel.name, channel.streamUrl, channel.logoUrl, channel.groupTitle, posMs, durMs)
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             } else {

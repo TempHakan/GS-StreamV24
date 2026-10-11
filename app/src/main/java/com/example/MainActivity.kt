@@ -310,7 +310,8 @@ class MainActivity : ComponentActivity() {
                                                 currentTabIndex = 2
                                             }
                                         }
-                                    }
+                                    },
+                                    onDeleteContinueWatching = { viewModel.deleteVodProgress(it) }
                                 )
                                 1 -> VodScreen(
                                     state = state,
@@ -323,7 +324,8 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     },
-                                    onToggleFavorite = { viewModel.toggleFavorite(it) }
+                                    onToggleFavorite = { viewModel.toggleFavorite(it) },
+                                    onDeleteContinueWatching = { viewModel.deleteVodProgress(it) }
                                 )
                                 2 -> PlayerScreen(
                                     state = state,
@@ -338,6 +340,9 @@ class MainActivity : ComponentActivity() {
                                     onEnterPip = { enterPictureInPicture() },
                                     onRequestUnlock = { channel ->
                                         viewModel.requestPlayChannel(channel) {}
+                                    },
+                                    onSaveVodProgress = { vodId, title, streamUrl, logoUrl, groupTitle, posMs, durMs ->
+                                        viewModel.saveVodProgress(vodId, title, streamUrl, logoUrl, groupTitle, posMs, durMs)
                                     }
                                 )
                                 3 -> SourcesScreen(
@@ -356,6 +361,8 @@ class MainActivity : ComponentActivity() {
                                     onToggleAutoUpdate = { viewModel.setAutoInstallUpdates(it) },
                                     savedToken = viewModel.getSavedGithubToken(),
                                     onSaveToken = { viewModel.saveGithubToken(it) },
+                                    savedRepo = viewModel.getSavedGithubRepo(),
+                                    onSaveRepo = { viewModel.saveGithubRepo(it) },
                                     onOpenReleases = { viewModel.openGithubReleasesInBrowser() },
                                     onToggleParentalEnable = { enabled, pin -> viewModel.setParentalControlEnabled(enabled, pin) },
                                     onUpdateParentalPin = { viewModel.updateParentalPin(it) },

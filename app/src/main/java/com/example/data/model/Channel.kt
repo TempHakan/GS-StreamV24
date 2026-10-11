@@ -75,5 +75,6 @@ data class VersionUpdateInfo(
     val changelog: List<String>,
     val isAvailable: Boolean = false,
     val isDownloading: Boolean = false,
-    val downloadProgress: Float = 0.0f
+    val downloadProgress: Float = 0.0f,
+    val lastCheckStatus: String? = null
 )

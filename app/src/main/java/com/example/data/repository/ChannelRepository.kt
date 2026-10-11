@@ -12,10 +12,14 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.UUID
 
+import com.example.data.local.VodWatchHistoryDao
+import com.example.data.model.VodWatchHistory
+
 class ChannelRepository(
     private val channelDao: ChannelDao,
     private val playlistDao: PlaylistDao,
-    private val parentalControlDao: com.example.data.local.ParentalControlDao
+    private val parentalControlDao: com.example.data.local.ParentalControlDao,
+    private val vodWatchHistoryDao: VodWatchHistoryDao
 ) {
     private val httpClient = OkHttpClient.Builder().build()
 
@@ -26,6 +30,41 @@ class ChannelRepository(
     val parentalSettings: Flow<com.example.data.model.ParentalSettings?> = parentalControlDao.getSettings()
     val lockedCategories: Flow<List<String>> = parentalControlDao.getLockedCategories()
     val lockedChannels: Flow<List<Channel>> = channelDao.getLockedChannels()
+    val continueWatchingList: Flow<List<VodWatchHistory>> = vodWatchHistoryDao.getContinueWatching(limit = 20)
+
+    suspend fun saveVodWatchProgress(
+        vodId: String,
+        title: String,
+        streamUrl: String,
+        logoUrl: String?,
+        groupTitle: String,
+        positionMs: Long,
+        durationMs: Long
+    ) {
+        val history = VodWatchHistory(
+            vodId = vodId,
+            title = title,
+            streamUrl = streamUrl,
+            logoUrl = logoUrl,
+            groupTitle = groupTitle,
+            positionMs = positionMs,
+            durationMs = durationMs,
+            lastWatchedTimestamp = System.currentTimeMillis()
+        )
+        vodWatchHistoryDao.saveWatchProgress(history)
+    }
+
+    suspend fun getVodWatchHistory(vodId: String): VodWatchHistory? {
+        return vodWatchHistoryDao.getWatchHistoryById(vodId)
+    }
+
+    suspend fun deleteVodWatchHistory(vodId: String) {
+        vodWatchHistoryDao.deleteWatchHistoryById(vodId)
+    }
+
+    suspend fun clearVodWatchHistory() {
+        vodWatchHistoryDao.clearAllHistory()
+    }
 
     fun getChannelsByType(type: StreamType): Flow<List<Channel>> = channelDao.getChannelsByType(type)
     fun getCategories(type: StreamType): Flow<List<String>> = channelDao.getCategories(type)

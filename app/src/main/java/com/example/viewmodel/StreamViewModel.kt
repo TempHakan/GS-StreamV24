@@ -11,6 +11,7 @@ import com.example.data.model.VersionUpdateInfo
 import com.example.data.repository.ChannelRepository
 import com.example.data.repository.UpdateRepository
 import com.example.ui.theme.AppThemeMode
+import com.example.data.model.VodWatchHistory
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -19,6 +20,7 @@ data class StreamUiState(
     val vodChannels: List<Channel> = emptyList(),
     val favoriteChannels: List<Channel> = emptyList(),
     val recentChannels: List<Channel> = emptyList(),
+    val continueWatchingList: List<VodWatchHistory> = emptyList(),
     val categories: List<String> = emptyList(),
     val selectedCategory: String? = null,
     val searchQuery: String = "",
@@ -51,7 +53,12 @@ data class StreamUiState(
 class StreamViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
-    private val channelRepository = ChannelRepository(db.channelDao(), db.playlistDao(), db.parentalControlDao())
+    private val channelRepository = ChannelRepository(
+        db.channelDao(),
+        db.playlistDao(),
+        db.parentalControlDao(),
+        db.vodWatchHistoryDao()
+    )
     private val updateRepository = UpdateRepository(application)
 
     private val _uiState = MutableStateFlow(StreamUiState())
@@ -137,6 +144,56 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
             channelRepository.lockedCategories.collect { list ->
                 _uiState.update { it.copy(lockedCategories = list.toSet()) }
             }
+        }
+
+        // VOD İzleme Geçmişi (Continue Watching) flow
+        viewModelScope.launch {
+            channelRepository.continueWatchingList.collect { list ->
+                _uiState.update { it.copy(continueWatchingList = list) }
+            }
+        }
+    }
+
+    /**
+     * VOD izleme pozisyonunu Room veritabanına kaydeder.
+     */
+    fun saveVodProgress(
+        vodId: String,
+        title: String,
+        streamUrl: String,
+        logoUrl: String?,
+        groupTitle: String,
+        positionMs: Long,
+        durationMs: Long
+    ) {
+        viewModelScope.launch {
+            channelRepository.saveVodWatchProgress(
+                vodId = vodId,
+                title = title,
+                streamUrl = streamUrl,
+                logoUrl = logoUrl,
+                groupTitle = groupTitle,
+                positionMs = positionMs,
+                durationMs = durationMs
+            )
+        }
+    }
+
+    /**
+     * Belirli bir VOD için izleme geçmişini siler.
+     */
+    fun deleteVodProgress(vodId: String) {
+        viewModelScope.launch {
+            channelRepository.deleteVodWatchHistory(vodId)
+        }
+    }
+
+    /**
+     * Tüm VOD izleme geçmişini temizler.
+     */
+    fun clearContinueWatching() {
+        viewModelScope.launch {
+            channelRepository.clearVodWatchHistory()
         }
     }
 
@@ -335,6 +392,14 @@ class StreamViewModel(application: Application) : AndroidViewModel(application) 
 
     fun getSavedGithubToken(): String {
         return updateRepository.getSavedGithubToken()
+    }
+
+    fun saveGithubRepo(repo: String) {
+        updateRepository.saveGithubRepo(repo)
+    }
+
+    fun getSavedGithubRepo(): String {
+        return updateRepository.getSavedGithubRepo()
     }
 
     fun openGithubReleasesInBrowser() {

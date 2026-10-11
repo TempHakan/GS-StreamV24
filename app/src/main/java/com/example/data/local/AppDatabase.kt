@@ -9,10 +9,11 @@ import com.example.data.model.Channel
 import com.example.data.model.LockedCategory
 import com.example.data.model.ParentalSettings
 import com.example.data.model.Playlist
+import com.example.data.model.VodWatchHistory
 
 @Database(
-    entities = [Channel::class, Playlist::class, LockedCategory::class, ParentalSettings::class],
-    version = 3,
+    entities = [Channel::class, Playlist::class, LockedCategory::class, ParentalSettings::class, VodWatchHistory::class],
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -20,6 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun channelDao(): ChannelDao
     abstract fun playlistDao(): PlaylistDao
     abstract fun parentalControlDao(): ParentalControlDao
+    abstract fun vodWatchHistoryDao(): VodWatchHistoryDao
 
     companion object {
         @Volatile

@@ -44,6 +44,7 @@ fun LiveTvScreen(
     onSelectVod: (Channel) -> Unit = {},
     onToggleLock: (Channel) -> Unit = {},
     onRequestPlayChannel: (Channel) -> Unit = onSelectChannel,
+    onDeleteContinueWatching: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isEpgGridMode by remember { mutableStateOf(false) }
@@ -370,6 +371,188 @@ fun LiveTvScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // 🌟 VOD İzlemeye Devam Et (Continue Watching) Bölümü (Room Database Destekli)
+                    // Kullanıcı arama yapmıyorken veya genel ekranda iken en son izlenen VOD'lar gösterilir
+                    if (state.continueWatchingList.isNotEmpty() && query.isEmpty() && !onlyFavorites) {
+                        item(key = "continue_watching_section_header") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp, bottom = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.History,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "İzlemeye Devam Et",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(
+                                            text = "${state.continueWatchingList.size}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // İzlemeye Devam Et: Yatay Kartlar ve İlerleme Çubuğu (Progress Bar)
+                        item(key = "continue_watching_horizontal_row") {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                contentPadding = PaddingValues(vertical = 4.dp)
+                            ) {
+                                items(state.continueWatchingList, key = { "cw_${it.vodId}" }) { item ->
+                                    val matchedVod = state.vodChannels.find { it.id == item.vodId }
+                                    val fallbackVod = Channel(
+                                        id = item.vodId,
+                                        name = item.title,
+                                        streamUrl = item.streamUrl,
+                                        logoUrl = item.logoUrl,
+                                        groupTitle = item.groupTitle,
+                                        streamType = com.example.data.model.StreamType.VOD
+                                    )
+                                    val targetVod = matchedVod ?: fallbackVod
+
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        shape = RoundedCornerShape(12.dp),
+                                        tonalElevation = 3.dp,
+                                        modifier = Modifier
+                                            .width(180.dp)
+                                            .clickable { onSelectVod(targetVod) }
+                                    ) {
+                                        Column {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(105.dp)
+                                                    .background(MaterialTheme.colorScheme.surface),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (!item.logoUrl.isNullOrEmpty()) {
+                                                    AsyncImage(
+                                                        model = item.logoUrl,
+                                                        contentDescription = item.title,
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier.fillMaxSize()
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Movie,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(40.dp)
+                                                    )
+                                                }
+
+                                                // Oynat Overlay Rozeti
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(36.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.Black.copy(alpha = 0.65f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.PlayArrow,
+                                                        contentDescription = "Oynat",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(22.dp)
+                                                    )
+                                                }
+
+                                                // Kaldır Butonu (Çarpı)
+                                                IconButton(
+                                                    onClick = { onDeleteContinueWatching(item.vodId) },
+                                                    modifier = Modifier
+                                                        .align(Alignment.TopEnd)
+                                                        .padding(2.dp)
+                                                        .size(26.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.Black.copy(alpha = 0.6f))
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Close,
+                                                        contentDescription = "Geçmişten Kaldır",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+
+                                                // İzleme İlerleme Çubuğu (Bottom Progress Bar)
+                                                LinearProgressIndicator(
+                                                    progress = { item.progress },
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(4.dp)
+                                                        .align(Alignment.BottomCenter),
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    trackColor = Color.Black.copy(alpha = 0.5f),
+                                                )
+                                            }
+
+                                            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
+                                                Text(
+                                                    text = item.title,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = item.groupTitle,
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    Text(
+                                                        text = "%${(item.progress * 100).toInt()}",
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        item(key = "divider_after_continue_watching") {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(vertical = 4.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                            )
+                        }
+                    }
+
                     // Eşleşen VOD Başlıkları Bölümü (Arama yapıldığında veya VOD sekmesinde)
                     if (showVodSection) {
                         item(key = "vod_section_header") {

@@ -76,17 +76,40 @@ class UpdateRepository(private val context: Context) {
 
     fun getSavedGithubToken(): String {
         val prefs = context.getSharedPreferences("streamflow_prefs", Context.MODE_PRIVATE)
-        return prefs.getString("github_token", "") ?: ""
+        return cleanGithubToken(prefs.getString("github_token", "") ?: "")
     }
 
     fun saveGithubToken(token: String) {
         val prefs = context.getSharedPreferences("streamflow_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putString("github_token", token.trim()).apply()
+        prefs.edit().putString("github_token", cleanGithubToken(token)).apply()
+    }
+
+    fun getSavedGithubRepo(): String {
+        val prefs = context.getSharedPreferences("streamflow_prefs", Context.MODE_PRIVATE)
+        val repo = prefs.getString("github_repo", "vyslkrc/streamflow-iptv") ?: "vyslkrc/streamflow-iptv"
+        return repo.trim().removePrefix("https://github.com/").removeSuffix("/").removeSuffix(".git")
+    }
+
+    fun saveGithubRepo(repo: String) {
+        val clean = repo.trim().removePrefix("https://github.com/").removeSuffix("/").removeSuffix(".git")
+        val prefs = context.getSharedPreferences("streamflow_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("github_repo", clean).apply()
+    }
+
+    private fun cleanGithubToken(raw: String): String {
+        var t = raw.trim()
+        if (t.startsWith("Bearer ", ignoreCase = true)) {
+            t = t.substring(7).trim()
+        } else if (t.startsWith("token ", ignoreCase = true)) {
+            t = t.substring(6).trim()
+        }
+        return t
     }
 
     fun openGithubReleasesInBrowser() {
+        val repo = getSavedGithubRepo()
         try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/vyslkrc/streamflow-iptv/releases")).apply {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/$repo/releases")).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
@@ -98,91 +121,138 @@ class UpdateRepository(private val context: Context) {
     /**
      * GitHub Releases API üzerinden en son sürümü denetler.
      * Private (Gizli) depolarda GitHub Token desteği ile çalışır.
+     * /releases, /releases/latest ve /tags uç noktalarını kontrol eder.
      */
     suspend fun checkForUpdates(
         backendUrl: String = "http://localhost:3000",
         autoInstallIfNewer: Boolean = false
     ): VersionUpdateInfo = withContext(Dispatchers.IO) {
         val token = getSavedGithubToken()
+        val repo = getSavedGithubRepo()
+        var diagnosticMessage = ""
 
-        // 1. GitHub Releases API (Token destekli)
+        // 1. GitHub Releases API (Token destekli, hem /releases hem de /releases/latest kontrolü)
         try {
-            val githubUrl = "https://api.github.com/repos/vyslkrc/streamflow-iptv/releases/latest"
-            val reqBuilder = Request.Builder()
-                .url(githubUrl)
-                .header("Accept", "application/vnd.github.v3+json")
-                .header("User-Agent", "StreamFlow-Updater")
+            val candidateEndpoints = listOf(
+                "https://api.github.com/repos/$repo/releases/latest",
+                "https://api.github.com/repos/$repo/releases?per_page=10",
+                "https://api.github.com/repos/$repo/tags?per_page=10"
+            )
 
-            if (token.isNotEmpty()) {
-                reqBuilder.header("Authorization", "Bearer $token")
-            }
+            for (endpoint in candidateEndpoints) {
+                val reqBuilder = Request.Builder()
+                    .url(endpoint)
+                    .header("Accept", "application/vnd.github+json")
+                    .header("X-GitHub-Api-Version", "2022-11-28")
+                    .header("User-Agent", "StreamFlow-Updater/2.4.0")
 
-            val request = reqBuilder.build()
-            val response = httpClient.newCall(request).execute()
-
-            if (response.code == 404 && token.isEmpty()) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context,
-                        "GitHub deponuz gizli (Private). Ayarlar'dan 'GitHub Token' ekleyerek veya depoyu 'Public' yaparak güncellemeleri alabilirsiniz.",
-                        Toast.LENGTH_LONG
-                    ).show()
+                if (token.isNotEmpty()) {
+                    reqBuilder.header("Authorization", "Bearer $token")
                 }
-            }
 
-            if (response.isSuccessful) {
-                val body = response.body?.string()
-                if (!body.isNullOrEmpty()) {
-                    val json = JSONObject(body)
-                    val tagName = json.optString("tag_name", "") // örn: v2.4.0-VK05
-                    val releaseNotes = json.optString("body", "")
+                val request = reqBuilder.build()
+                val response = httpClient.newCall(request).execute()
 
-                    val vkMatch = Regex("""VK(\d+)""", RegexOption.IGNORE_CASE).find(tagName)
-                    val remoteVkTag = vkMatch?.value?.uppercase() ?: computeNextTag(currentTag)
-                    val remoteNum = parseTagNumber(remoteVkTag)
-                    val currentNum = parseTagNumber(currentTag)
+                if (response.code == 404) {
+                    diagnosticMessage = if (token.isEmpty()) {
+                        "404 Not Found: Depo gizli (Private). Lütfen GitHub Token giriniz veya depoyu Public yapınız."
+                    } else {
+                        "404 Not Found: Depo veya Token yetkisi geçersiz. Token'ınızın 'repo' yetkisi olduğundan emin olun."
+                    }
+                    continue
+                } else if (response.code == 401) {
+                    diagnosticMessage = "401 Unauthorized: Girilen GitHub Token geçersiz veya süresi dolmuş."
+                    continue
+                }
 
-                    var apkUrl = ""
-                    val assets = json.optJSONArray("assets")
-                    if (assets != null) {
-                        for (i in 0 until assets.length()) {
-                            val asset = assets.getJSONObject(i)
-                            val name = asset.optString("name", "")
-                            if (name.endsWith(".apk")) {
-                                apkUrl = asset.optString("browser_download_url", "")
-                                break
+                if (response.isSuccessful) {
+                    val body = response.body?.string() ?: ""
+                    if (body.isNotBlank()) {
+                        var latestReleaseJson: JSONObject? = null
+                        var tagName = ""
+                        var releaseNotes = ""
+                        var apkUrl = ""
+                        var assetApiUrl = ""
+
+                        if (endpoint.endsWith("/latest")) {
+                            latestReleaseJson = JSONObject(body)
+                            tagName = latestReleaseJson.optString("tag_name", "")
+                            releaseNotes = latestReleaseJson.optString("body", "")
+                        } else if (endpoint.contains("/releases")) {
+                            val jsonArray = org.json.JSONArray(body)
+                            if (jsonArray.length() > 0) {
+                                // En güncel release objesini al
+                                latestReleaseJson = jsonArray.getJSONObject(0)
+                                tagName = latestReleaseJson.optString("tag_name", "")
+                                releaseNotes = latestReleaseJson.optString("body", "")
+                            }
+                        } else if (endpoint.contains("/tags")) {
+                            val tagsArray = org.json.JSONArray(body)
+                            if (tagsArray.length() > 0) {
+                                val tagObj = tagsArray.getJSONObject(0)
+                                tagName = tagObj.optString("name", "")
+                                releaseNotes = "GitHub tag: $tagName üzerinden tespit edildi."
                             }
                         }
-                    }
-                    if (apkUrl.isEmpty()) {
-                        apkUrl = "https://github.com/vyslkrc/streamflow-iptv/releases/download/$tagName/StreamFlow-IPTV-$tagName.apk"
-                    }
 
-                    val notesList = if (releaseNotes.isNotEmpty()) {
-                        releaseNotes.lines().filter { it.trim().isNotEmpty() }.take(5)
-                    } else {
-                        _updateState.value.changelog
-                    }
+                        if (tagName.isNotBlank()) {
+                            val vkMatch = Regex("""VK(\d+)""", RegexOption.IGNORE_CASE).find(tagName)
+                            val remoteVkTag = vkMatch?.value?.uppercase() ?: computeNextTag(currentTag)
+                            val remoteNum = parseTagNumber(remoteVkTag)
+                            val currentNum = parseTagNumber(currentTag)
 
-                    val isNewer = remoteNum > currentNum
-                    val info = VersionUpdateInfo(
-                        currentTag = currentTag,
-                        nextTag = remoteVkTag,
-                        versionCode = remoteNum,
-                        downloadUrl = apkUrl,
-                        changelog = notesList,
-                        isAvailable = isNewer
-                    )
-                    _updateState.value = info
+                            // Asset listesinden APK ara
+                            val assets = latestReleaseJson?.optJSONArray("assets")
+                            if (assets != null) {
+                                for (i in 0 until assets.length()) {
+                                    val asset = assets.getJSONObject(i)
+                                    val name = asset.optString("name", "")
+                                    if (name.endsWith(".apk", ignoreCase = true)) {
+                                        apkUrl = asset.optString("browser_download_url", "")
+                                        assetApiUrl = asset.optString("url", "")
+                                        break
+                                    }
+                                }
+                            }
 
-                    if (isNewer && autoInstallIfNewer) {
-                        startDirectDownloadAndInstall(apkUrl, remoteVkTag)
+                            if (apkUrl.isEmpty()) {
+                                apkUrl = "https://github.com/$repo/releases/download/$tagName/StreamFlow-IPTV-$tagName.apk"
+                            }
+
+                            val notesList = if (releaseNotes.isNotEmpty()) {
+                                releaseNotes.lines().filter { it.trim().isNotEmpty() }.take(5)
+                            } else {
+                                _updateState.value.changelog
+                            }
+
+                            val isNewer = remoteNum > currentNum
+                            val statusMsg = if (isNewer) {
+                                "Yeni sürüm bulundu ($remoteVkTag)"
+                            } else {
+                                "En güncel sürümdesiniz ($currentTag = $remoteVkTag)"
+                            }
+
+                            val info = VersionUpdateInfo(
+                                currentTag = currentTag,
+                                nextTag = if (isNewer) remoteVkTag else computeNextTag(currentTag),
+                                versionCode = if (remoteNum > 0) remoteNum else currentCode,
+                                downloadUrl = if (assetApiUrl.isNotEmpty()) assetApiUrl else apkUrl,
+                                changelog = notesList,
+                                isAvailable = isNewer,
+                                lastCheckStatus = statusMsg
+                            )
+                            _updateState.value = info
+
+                            if (isNewer && autoInstallIfNewer) {
+                                startDirectDownloadAndInstall(info.downloadUrl, remoteVkTag)
+                            }
+                            return@withContext info
+                        }
                     }
-                    return@withContext info
                 }
             }
         } catch (e: Exception) {
-            // GitHub API hatası
+            diagnosticMessage = "Bağlantı hatası: ${e.localizedMessage ?: e.message}"
         }
 
         // 2. Backend /api/v1/version/check
@@ -205,7 +275,8 @@ class UpdateRepository(private val context: Context) {
                     versionCode = code,
                     downloadUrl = dl,
                     changelog = _updateState.value.changelog,
-                    isAvailable = latest != currentTag
+                    isAvailable = latest != currentTag,
+                    lastCheckStatus = "Backend üzerinden kontrol edildi"
                 )
                 _updateState.value = info
                 if (info.isAvailable && autoInstallIfNewer) {
@@ -225,9 +296,10 @@ class UpdateRepository(private val context: Context) {
             downloadUrl = "",
             changelog = listOf(
                 "En güncel sürümü ($currentTag) kullanıyorsunuz.",
-                "Sistem kararlı ve çalışıyor."
+                diagnosticMessage.ifEmpty { "GitHub ve API denetimi tamamlandı." }
             ),
-            isAvailable = false
+            isAvailable = false,
+            lastCheckStatus = diagnosticMessage.ifEmpty { "Uygulamanız güncel ($currentTag)" }
         )
         _updateState.value = info
         return@withContext info
@@ -235,7 +307,7 @@ class UpdateRepository(private val context: Context) {
 
     /**
      * APK dosyasını indirir veya yerel fail-safe motoruyla kurar.
-     * Asla 'İndirme Başarısız Oldu' hatası vermez!
+     * Private (Gizli) depolarda GitHub asset API header'ı ile ikili (binary) akışı indirir.
      */
     suspend fun startDirectDownloadAndInstall(url: String, targetTag: String) = withContext(Dispatchers.IO) {
         withContext(Dispatchers.Main) {
@@ -245,18 +317,18 @@ class UpdateRepository(private val context: Context) {
 
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: context.cacheDir
         val apkFile = File(downloadDir, "StreamFlow-$targetTag.apk")
+        val repo = getSavedGithubRepo()
+        val token = getSavedGithubToken()
 
         // İndirme denenecek aday URL listesi
-        val candidateUrls = listOf(
-            url,
-            "https://raw.githubusercontent.com/vyslkrc/streamflow-iptv/main/apk/StreamFlow-IPTV-v2.4.0-$targetTag.apk",
-            "https://github.com/vyslkrc/streamflow-iptv/releases/download/v2.4.0-$targetTag/StreamFlow-IPTV-v2.4.0-$targetTag.apk",
-            "http://10.0.2.2:3000/api/v1/version/download",
-            "http://localhost:3000/api/v1/version/download"
-        )
+        val candidateUrls = mutableListOf<String>()
+        if (url.isNotBlank()) candidateUrls.add(url)
+        candidateUrls.add("https://github.com/$repo/releases/download/v2.4.0-$targetTag/StreamFlow-IPTV-v2.4.0-$targetTag.apk")
+        candidateUrls.add("https://raw.githubusercontent.com/$repo/main/apk/StreamFlow-IPTV-v2.4.0-$targetTag.apk")
+        candidateUrls.add("http://10.0.2.2:3000/api/v1/version/download")
+        candidateUrls.add("http://localhost:3000/api/v1/version/download")
 
         var downloadSucceeded = false
-        val token = getSavedGithubToken()
 
         for (candidate in candidateUrls) {
             if (candidate.isBlank()) continue
@@ -267,6 +339,10 @@ class UpdateRepository(private val context: Context) {
 
                 if (token.isNotEmpty() && candidate.contains("github")) {
                     reqBuilder.header("Authorization", "Bearer $token")
+                    // GitHub API asset URL'leri octet-stream başlığı gerektirir
+                    if (candidate.contains("api.github.com/repos/")) {
+                        reqBuilder.header("Accept", "application/octet-stream")
+                    }
                 }
 
                 val request = reqBuilder.build()
@@ -276,7 +352,7 @@ class UpdateRepository(private val context: Context) {
                     val body = response.body!!
                     val contentLength = body.contentLength()
                     // Eğer dönen içerik geçerli bir APK (HTML hata sayfası değil) ise:
-                    if (contentLength > 500_000 || body.contentType()?.subtype == "vnd.android.package-archive" || candidate.endsWith(".apk")) {
+                    if (contentLength > 500_000 || body.contentType()?.subtype == "vnd.android.package-archive" || body.contentType()?.subtype == "octet-stream" || candidate.endsWith(".apk")) {
                         val inputStream = body.byteStream()
                         val outputStream = FileOutputStream(apkFile)
 
